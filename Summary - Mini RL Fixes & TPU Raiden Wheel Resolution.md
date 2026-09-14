@@ -138,6 +138,32 @@ Weight transfers use **TPU Raiden / TPU Sync** (`tpu_raiden_torch` native extens
 
 ---
 
+### Issue 6: Destination Out of Bounds in Batched Push (Trainer vs. Sampler Layer Index Desynchronization)
+
+* **Symptom**:
+  When running full GRPO training with Torchtitan Trainer and vLLM Sampler, Step 0 weight sync fails with:
+  ```text
+  (vLLMHttpServer) ProcessPeerRequest failed: INVALID_ARGUMENT: Destination out of bounds in batched push
+  tpu_sync/transport/lib/raw_buffer_transport.cc:342
+  (WorkerDict) PushWeightsResharded native execution failed: INTERNAL: tcp socket writev failed: errno=104 (Connection reset by peer)
+  ```
+* **Root Cause**:
+  In `raiden_controller.py`, during push schedule creation, chunk metadata is assigned `entry.layer_idx = src_var.layer_idx` (the Trainer's parameter index) instead of `dst_var.layer_idx` (the Sampler's parameter index).
+  In full production models (e.g. Qwen-0.6B with 226+ parameters), Torchtitan and vLLM enumerate and register parameters in different orders due to differences in weight-tying, attention projection naming, and module hierarchies.
+  When the TCP packet arrives at the vLLM receiver, `raw_buffer_transport.cc` queries `GetHostSize(meta.layer_idx, ...)` using the Trainer's layer index. Looking up the wrong tensor causes the slice byte offset and length to exceed the buffer bounds, failing the bounds check and dropping the TCP connection.
+  Additionally:
+  - `reproduce_standalone.py` missed this because it runs single-process mock initialization without network receivers.
+  - `mini_rl_reproduce.py` missed this because both Trainer and Sampler used the identical `MiniModel` with identical parameter lists, making `src_var.layer_idx == dst_var.layer_idx` by coincidence.
+* **Fix**:
+  1. **Protocol Decoupling in `tpu-sync`**:
+     - Update `raiden_service.proto` to include `dst_layer_idx` in `ShardPushScheduleEntryProto`.
+     - In `weight_synchronizer_base.cc`, read local source memory using `entry.layer_idx()` and transmit `dst_layer_idx` in `task.buffer_id` to the destination.
+     - In `raiden_controller.py`, match destination variables by string `name` rather than assuming index equality, and populate `dst_var.layer_idx` in destination schedules.
+  2. **Parameter Name Normalization in verl**:
+     - Normalize and sort parameter names across [`raiden_checkpoint_engine.py`](file:///usr/local/google/home/wenjung/verl-upstream/verl/checkpoint_engine/raiden_checkpoint_engine.py) and [`tpu_utils.py`](file:///usr/local/google/home/wenjung/verl-upstream/verl/workers/rollout/vllm_rollout/tpu_utils.py) to ensure canonical Hugging Face naming.
+
+---
+
 ## 3. Validation Summary
 
 | Test Case | Environment | Result |
@@ -145,4 +171,6 @@ Weight transfers use **TPU Raiden / TPU Sync** (`tpu_raiden_torch` native extens
 | Standalone TPU Sync Import | Remote TPU VM (`wenjung-test-tpu-...`) | **PASS** (`import tpu_sync` succeeded) |
 | `reproduce_standalone.py` (Local Mock) | Remote TPU VM (`venv_torch212`) | **PASS** (Zero errors, weight sync OK) |
 | Ray Job `07000000` (`mini_rl_reproduce.py`) | GKE TPU v6e-8 Cluster (`alekseyv-tpu-...`) | **PASS** (Exit code 0, 100% completed) |
-| Container Build (`Dockerfile.tpu`) | Local build & Artifact Registry push | **PASS** (`v-raiden-20260914050623`) |
+| Container Build (`Dockerfile.tpu`) | Local build & Artifact Registry push | **PASS** (`v-raiden-20260914171015`) |
+| Ray Job `raysubmit_C226Ast272Ffk7wN` (GRPO Run) | GKE TPU v6e-8 Cluster | **FAILED** (Root caused: Issue 6 layer index mismatch) |
+
