@@ -171,6 +171,7 @@ Weight transfers use **TPU Raiden / TPU Sync** (`tpu_raiden_torch` native extens
 | Standalone TPU Sync Import | Remote TPU VM (`wenjung-test-tpu-...`) | **PASS** (`import tpu_sync` succeeded) |
 | `reproduce_standalone.py` (Local Mock) | Remote TPU VM (`venv_torch212`) | **PASS** (Zero errors, weight sync OK) |
 | Ray Job `07000000` (`mini_rl_reproduce.py`) | GKE TPU v6e-8 Cluster (`alekseyv-tpu-...`) | **PASS** (Exit code 0, 100% completed) |
-| Container Build (`Dockerfile.tpu`) | Local build & Artifact Registry push | **PASS** (`v-raiden-20260914171015`) |
+| Container Build (`Dockerfile.tpu`) | Local build & Artifact Registry push | **PASS** (`v-raiden-20260914201943`) |
 | Ray Job `raysubmit_C226Ast272Ffk7wN` (GRPO Run) | GKE TPU v6e-8 Cluster | **FAILED** (Root caused: Issue 6 layer index mismatch) |
+| Ray Job `raysubmit_uyKfsKsVxgfvygMP` (GRPO End-to-End Run) | GKE TPU v6e-8 Cluster | **PASS** (100% completed, `timing_s/update_weights`: 1.49s, W&B synced) |
 
