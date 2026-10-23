@@ -224,6 +224,42 @@ rank 0 routed_input_ND: A0e0, A2e0, A0e1, A1e1, A1e2, A2e3
 rank 1 routed_input_ND: B0e0, B1e0, B0e1, B2e1, B2e2, B1e3
 ```
 
+#### What `perm = argsort(flat_ids, stable=True)` means
+Example (from section 13): `expert_ids_TK = [[1,0],[2,1],[0,2]]`, `K = 2`.
+
+1. Flatten `(T, K) -> (N,)`: flat index `i = t * K + k`, so `t = i // K`, `k = i % K`.
+   ```
+   i        : 0   1   2   3   4   5
+   (t, k)   : t0k0 t0k1 t1k0 t1k1 t2k0 t2k1
+   expert   : 1   0   2   1   0   2
+   ```
+2. `argsort` returns **indices** (not values) that would sort the array:
+   `perm[j]` = which flat route goes to sorted position `j`.
+   Sort by expert: expert 0 -> i in {1, 4}; expert 1 -> {0, 3}; expert 2 -> {2, 5}.
+   ```
+   perm = [1, 4, 0, 3, 2, 5]
+   flat_ids[perm] = [0, 0, 1, 1, 2, 2]   # now expert-major
+   ```
+3. `stable=True`: ties keep original order (route 1 before 4, 0 before 3, 2 before 5),
+   i.e. within an expert, rows stay in token order. Deterministic; an unstable sort could
+   give `[4, 1, ...]`, changing BF16 dWeight accumulation order (TPU code keeps it stable
+   for that reason).
+4. Decode each sorted row:
+   ```
+   j (sorted row) : 0    1    2    3    4    5
+   perm[j]        : 1    4    0    3    2    5
+   token = //K    : 0    2    0    1    1    2     -> token_idx
+   slot  = %K     : 1    0    0    1    0    1
+   expert         : 0    0    1    1    2    2
+   ```
+   `routed_in = x[token_idx]`, `scores_N = scores_TK.reshape(-1)[perm]`.
+5. Inverse: `inverse = argsort(perm) = [2, 0, 4, 3, 1, 5]`, where `inverse[i]` is the
+   sorted row holding flat route `i`. Used by `_LocalReorder.backward` to return to
+   `(T, K)` order.
+
+Code: base `models/common/token_dispatcher.py` L93-L100; TPU
+`experiments/tpu/token_dispatcher.py` L223 (`local_reorder`) and L183-L194 (forward).
+
 ### Step 2 - count exchange (`_token_count_exchange`, `_sync_token_count_exchange`)
 `counts_E.view(EP, e)`; row r goes to rank r via all-to-all.
 ```
