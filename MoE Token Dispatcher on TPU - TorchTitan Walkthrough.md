@@ -544,6 +544,35 @@ out        = [1.6, -0.2, 0.0]
 ### Backward, given upstream `dout = [1.0, 2.0, -1.0]`
 Residual `x + MoE(ffn_norm(x))`: `dout` goes to the residual unchanged AND into MoE.
 
+#### Where `dout` comes from
+`dout = [1.0, 2.0, -1.0]` was an **assumed** upstream gradient chosen for easy arithmetic.
+Really, `dout[t] = d(loss) / d(out[t])`, produced by backprop from the loss down to this layer:
+```
+loss.backward()                         trainer.py L864-L874
+  -> cross-entropy: dlogits = (softmax(logits) - onehot(label)) / global_valid_tokens
+  -> lm_head:       dh = dlogits @ W_lm
+  -> final norm backward
+  -> layers L-1 ... l+1 backward (each residual passes grad through + adds its branch grad)
+  -> dout at the output of this layer's MoE branch
+```
+Because of `x_next = x + out`, `d loss/d out = d loss/d x_next` exactly.
+
+Toy derivation (MoE layer is the last layer, final norm = identity, `D=1`, vocab `V=2`,
+`W_lm = [[1], [-1]]`, mean over 3 tokens):
+```
+h = x + out = [1+1.6, 2-0.2, 3+0] = [2.6, 1.8, 3.0]
+logits_t = [h_t, -h_t]  ->  p0_t = sigmoid(2 h_t)
+labels (next tokens) = [1, 0, 1]
+dlogits_t = (p_t - onehot_t) / 3 ;  dh_t = (dlogit0 - dlogit1) = 2 (p0_t - y0_t) / 3
+t0: p0 = sigmoid(5.2) = 0.9945, y0 = 0 -> dh = 2*0.9945/3      =  0.663
+t1: p0 = sigmoid(3.6) = 0.9734, y0 = 1 -> dh = 2*(-0.0266)/3   = -0.018
+t2: p0 = sigmoid(6.0) = 0.9975, y0 = 0 -> dh = 2*0.9975/3      =  0.665
+dout = [0.663, -0.018, 0.665]
+```
+Sign meaning: `dout[t] > 0` -> increasing `out[t]` raises loss (pushes toward the wrong
+class here); `t1` is already nearly correct, so its gradient is tiny.
+
+
 | Step | Op (reverse order) | Math | Values |
 |---|---|---|---|
 | B1 | combine reduce `_StableGroupedReduce.backward` | `d_scaled = dout[token_idx]` | `[1,-1,1,2,2,-1]` |
