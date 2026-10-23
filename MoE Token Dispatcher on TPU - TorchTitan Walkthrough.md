@@ -24,6 +24,7 @@ Code paths are relative to the torchtitan repo root.
 11. [[#11. Pallas grouped matmul]]
 12. [[#12. Code map - router example step by step]]
 13. [[#13. Backward pass through MoE - numerical example (EP=1, TPU path)]]
+14. [[#14. How all-to-all moves data across ranks]]
 
 ---
 
@@ -760,3 +761,62 @@ Real per-rank shapes (Q30, EP=1): `T=12288`, `K=8`, `N=98304`, `D=2048`, `F=768`
 With EP>1, two extra all-to-alls appear in backward: combine's all-to-all backward sends
 `d_routed_out` to the expert owners (dispatch direction), and dispatch's all-to-all
 backward returns `d_routed_in` to the token owners (combine direction).
+
+---
+
+## 14. How all-to-all moves data across ranks
+
+### Semantics (`all_to_all_single(input, output_splits, input_splits, group)`)
+Each rank cuts its input into `EP` chunks (sizes `input_splits`); **chunk j of rank i
+goes to rank j**, landing as chunk i of rank j's output (sizes `output_splits`).
+Send matrix `S[i][j]` = rows rank i sends to rank j:
+- rank i's `input_splits`  = row i of S
+- rank j's `output_splits` = column j of S
+- it is a block transpose; the self chunk (`S[i][i]`) is a local copy.
+
+Only ranks in the same EP group talk (`group=self.ep_mesh`); other EP groups run
+their own all-to-all concurrently.
+
+### Phase 1 - count exchange (fixed size), `_token_count_exchange` L245-L273
+Each rank sends `counts_E.view(EP, e)`: row r = my counts for rank r's experts.
+Splits are `None` (equal chunks of `e` ints).
+```
+rank 0 sends [[2,2] -> r0, [1,1] -> r1]     rank 1 sends [[2,2] -> r0, [1,1] -> r1]
+rank 0 recv  [[2,2] from r0, [2,2] from r1]  rank 1 recv [[1,1] from r0, [1,1] from r1]
+```
+Then `_sync_token_count_exchange` L275-L314 sums rows into splits and copies to CPU:
+`input_splits` non-blocking; `output_splits` blocking (device-to-host sync) because the
+ragged data exchange needs output sizes before launch.
+
+### Phase 2 - data exchange (ragged), `_dispatch_token_exchange` L316-L342
+```
+S = [[4, 2],      rank 0: input_splits [4,2], output_splits = col 0 = [4,4] -> R=8
+     [4, 2]]      rank 1: input_splits [4,2], output_splits = col 1 = [2,2] -> R=4
+
+rank 0 input: [A0e0 A2e0 A0e1 A1e1 | A1e2 A2e3]    (chunk0 -> r0, chunk1 -> r1)
+rank 1 input: [B0e0 B1e0 B0e1 B2e1 | B2e2 B1e3]
+
+rank 0 output: [A0e0 A2e0 A0e1 A1e1 | B0e0 B1e0 B0e1 B2e1]   (from r0 | from r1)
+rank 1 output: [A1e2 A2e3 | B2e2 B1e3]
+```
+Wire traffic: r0 -> r1 2 rows, r1 -> r0 4 rows; self chunks stay local.
+
+### Combine and backward
+- Combine `_combine_token_exchange` L344-L370: same call with **splits swapped**
+  (send `output_splits`, receive `input_splits`) -> each rank gets back its own N rows.
+- Autograd of an all-to-all is an all-to-all with swapped splits. Backward therefore has:
+  combine-backward (dispatch direction) and dispatch-backward (combine direction).
+- Per MoE layer per step: 4 data all-to-alls (2 fwd + 2 bwd) + 1 count exchange (fwd);
+  more if activation checkpointing replays forward.
+
+### Mechanics
+- `all_to_all_single` from `torch.distributed._functional_collectives`: returns an
+  `AsyncCollectiveTensor`; waits happen on first use (explicit `wait_tensor` for counts, L289).
+- With spmd_types backend, `spmd.all_to_all(..., src=V, dst=V)` is used instead (same semantics).
+- Ragged sizes are why `R` is data dependent and why the D2H sync exists. The TPU module
+  docstring notes a bounded ragged all-to-all transport was prototyped but not included.
+
+### Rough size (Q30 recipe with ep=128)
+Per rank per layer: `N = 12288 * 8 = 98304` rows x `D = 2048` x 2 bytes (BF16)
+= 384 MiB sent in dispatch (about 127/128 leaves the chip), same again in combine,
+and the same pair again in backward.
