@@ -619,6 +619,20 @@ dw2 = 1.4*2 + (-0.5)*3 =  1.3
 ```
 Only rows routed to `e` contribute; an expert with 0 tokens gets `dW_e = 0`.
 
+> Why a sum: `w_e` is one number reused by every row in segment `e`, so it reaches `L`
+> through several paths (`w_e -> y_r -> L` for each row r). Multivariable chain rule:
+> `dL/dw_e = sum_r dL/dy_r * dy_r/dw_e`; for `y_r = w_e * x_r`, `dy_r/dw_e = x_r`.
+> Rows of other experts don't use `w_e` (`dy_r/dw_e = 0`), so they drop out.
+>
+> Finite-difference check (e0: rows `x = [1, 3]`, `dL/dy = [0.4, -0.5]`):
+> nudge `w0` by `0.01` -> `y` moves `[0.01, 0.03]` ->
+> `L` moves `0.4*0.01 + (-0.5)*0.03 = 0.004 - 0.015 = -0.011` -> `dL/dw0 = -1.1`.
+>
+> Reading it as a vote: row 1 (`dL/dy > 0`) wants a smaller `w0` with weight `x = 1`;
+> row 2 (`dL/dy < 0`) wants a larger `w0` with weight `x = 3`. Net `-1.1 < 0`, so
+> gradient descent (`w0 -= lr * dw0`) increases `w0`. Same pattern as any shared
+> parameter; FSDP reduce-scatter then sums these per-rank partial sums across ranks.
+
 **Matrix version** (what the kernel does; layout `X_e (R_e, K) @ W_e (K, N)`):
 ```
 forward  Y_e  = X_e @ W_e          gmm
