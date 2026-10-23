@@ -23,6 +23,7 @@ Code paths are relative to the torchtitan repo root.
 10. [[#10. TPU dispatcher - TpuAllToAllTokenDispatcher and converter]]
 11. [[#11. Pallas grouped matmul]]
 12. [[#12. Code map - router example step by step]]
+13. [[#13. Backward pass through MoE - numerical example (EP=1, TPU path)]]
 
 ---
 
@@ -475,3 +476,103 @@ Q30 FSDP recipe: all on, `tile_m=256`, `tgmm_tiling=(256, 0, 0)`.
 | bias update | `components/optimizer/optimizer.py` L517-L560 |
 | dScore backward | base autograd L158-L161; TPU `_ScaleRouteWeights.backward`, `route_score_grad` |
 | dW_gate | `models/common/linear.py` L82-L98 |
+
+---
+
+## 13. Backward pass through MoE - numerical example (EP=1, TPU path)
+
+Real target: Q30 FSDP-only recipe (`ep=1`), `TpuAllToAllTokenDispatcher` +
+`TpuGroupedExperts` (Pallas). Backward runs the forward chain in reverse; every
+custom forward op has a hand-written VJP.
+
+### Setup (`T=3`, `K=2`, `E=3`, `D=1`; experts simplified to `Expert_e(x) = w_e * x`)
+```
+x            = [1.0, 2.0, 3.0]                  tokens t0, t1, t2
+expert_ids   = [[1,0],[2,1],[0,2]]
+scores_TK    = [[0.6,0.4],[0.7,0.3],[0.5,0.5]]  (after route_norm)
+w            = [w0=1.0, w1=2.0, w2=-1.0]
+```
+
+### Forward recap
+```
+perm       = argsort([1,0,2,1,0,2], stable) = [1,4,0,3,2,5]
+token_idx  = perm // 2                      = [0,2,0,1,1,2]
+scores_N   = flat_scores[perm]              = [0.4,0.5,0.6,0.3,0.7,0.5]
+routed_in  = x[token_idx]                   = [1,3 | 1,2 | 2,3]   group_sizes [2,2,2]
+routed_out = w_e * row                      = [1,3 | 2,4 | -2,-3]
+scaled     = routed_out * scores_N          = [0.4,1.5,1.2,1.2,-1.4,-1.5]
+combine: argsort(token_idx, stable) = [0,2,3,4,1,5] -> (T,K) [[0.4,1.2],[1.2,-1.4],[1.5,-1.5]]
+out        = [1.6, -0.2, 0.0]
+```
+
+### Backward, given upstream `dout = [1.0, 2.0, -1.0]`
+Residual `x + MoE(ffn_norm(x))`: `dout` goes to the residual unchanged AND into MoE.
+
+| Step | Op (reverse order) | Math | Values |
+|---|---|---|---|
+| B1 | combine reduce `_StableGroupedReduce.backward` | `d_scaled = dout[token_idx]` | `[1,-1,1,2,2,-1]` |
+| B2a | score scale -> expert output | `d_routed_out = d_scaled * scores_N` | `[0.4,-0.5,0.6,0.6,1.4,-0.5]` |
+| B2b | score scale -> score | `d_scores_N = sum_D(d_scaled * routed_out)` | `[1,-3,2,8,-4,3]` |
+| B3a | expert dInput (gmm, transpose_rhs) | `d_routed_in = d_routed_out * w_e` | `[0.4,-0.5 | 1.2,1.2 | -1.4,0.5]` |
+| B3b | expert dWeight (tgmm, per segment) | `dW_e = sum rows x * d_routed_out` | `dw0=-1.1, dw1=1.8, dw2=1.3` |
+| B4a | `_LocalReorder.backward` dx | `inverse=argsort(perm)=[2,0,4,3,1,5]`; gather, reshape (T,K), FP32 sum | `[[1.2,0.4],[-1.4,1.2],[-0.5,0.5]] -> dx_moe=[1.6,-0.2,0.0]` |
+| B4b | `_LocalReorder.backward` dscore | `d_scores_N[inverse].reshape(T,K)` | `[[2,1],[-4,8],[-3,3]]` |
+| B5 | router (route_norm -> gather -> softmax -> gate) | see below | t0: `dlogit=[-0.24,0.24,0]` |
+
+Checks:
+- `dw0 = 1*0.4 + 3*(-0.5) = -1.1` (expert 0 saw t0 and t2)
+- `dx_t = dout_t * sum_k s_tk * w_e`: t0 `1 * (0.6*2 + 0.4*1) = 1.6`
+- `dscore[t,k] = dout_t * Expert_k(x_t)`: t0 slot0 (e1) `1*2 = 2`, slot1 (e0) `1*1 = 1`
+
+### B5 router detail for t0
+Assume full softmax `p = [0.36, 0.54, 0.10]` (top-2 = e1, e0; route_norm `0.54/0.9=0.6`, `0.36/0.9=0.4`).
+```
+route_norm backward: dp_k = (ds_k - sum_j ds_j * s_j) / sum(p_topk)
+  ds = [2, 1], s = [0.6, 0.4], sum ds*s = 1.6, sum(p_topk) = 0.9
+  dp = [0.4, -0.6] / 0.9 = [0.444, -0.667]     (slots e1, e0)
+gather backward (scatter into E): dP_E = [e0 -0.667, e1 0.444, e2 0]
+softmax backward: dlogit = p * (dP - sum(p * dP))
+  sum(p * dP) = 0.36*(-0.667) + 0.54*0.444 = 0
+  dlogit = [-0.24, 0.24, 0]
+gate: dW_gate[e] += dlogit_e * x_t ; dx_router = W_gate.T @ dlogit
+```
+Meaning: e1 produced a larger output than e0 for t0 and `dout > 0` (larger output raises
+loss), so gradient descent lowers e1's logit and raises e0's. e2 was not chosen, so it
+gets no gradient from this token (topk indices are non-differentiable).
+
+Total gradient at `ffn_norm` output for t0 = `dx_moe + dx_router`; then through
+`ffn_norm` backward and added to the residual `dout`.
+
+### Real SwiGLU expert backward (per expert segment, what gmm/tgmm compute)
+```
+forward:  g = x W1^T   u = x W3^T   h = silu(g) * u   y = h W2^T
+backward: dh  = dy @ W2          (gmm, transpose_rhs)      dW2 = h^T @ dy   (tgmm)
+          du  = dh * silu(g)                               dW3 = x^T @ du   (tgmm)
+          dg  = dh * u * silu'(g)                          dW1 = x^T @ dg   (tgmm)
+          dx  = dg @ W1 + du @ W3  (gmm; paired kernel does both in one pass)
+```
+
+### Code map (real TPU case)
+| Step | Code |
+|---|---|
+| residual + MoE call | `models/qwen3/model.py` L66 |
+| B1 combine reduce backward | `experiments/tpu/token_dispatcher.py` L136-L142 `_StableGroupedReduce.backward` |
+| B2 score scale backward (fused, opt-in) | `experiments/tpu/token_dispatcher.py` L50-L66 `_ScaleRouteWeights.backward` -> `kernels/route_score.py` L27-L58 |
+| B2 score scale backward (default) | native autograd of `experiments/tpu/token_dispatcher.py` L275-L278 |
+| B3 W2 projection backward | `kernels/expert_segment_matmul.py` L121-L126 `_backward` -> L63-L111 `_grouped_mm_bwd` (gmm L77-L90, tgmm L91-L110) |
+| B3 silu * up backward | native autograd of `experiments/tpu/grouped_experts.py` L290 |
+| B3 W1/W3 paired backward | `kernels/paired_segment_matmul.py` L470-L486 `_backward` -> L440 `_paired_grouped_mm_bwd`, `_dinput` L251, `_paired_dweight` L269 |
+| B3 call site | `experiments/tpu/grouped_experts.py` L258-L299 |
+| B4 reorder backward | `experiments/tpu/token_dispatcher.py` L196-L213 `_LocalReorder.backward` |
+| B5 route_norm / gather / softmax | autograd of `models/common/moe.py` L691-L696, L670 |
+| B5 aux-loss gradient injection | `models/common/moe.py` L715-L720, L800-L851 |
+| B5 gate backward | `models/common/linear.py` L82-L98 |
+| routing reused under full AC | `models/common/moe.py` L682-L687 (`recompute=False`) |
+
+After backward: FSDP reduce-scatters `dW_e`, `dW_gate`, attention grads; optimizer steps.
+
+Real per-rank shapes (Q30, EP=1): `T=12288`, `K=8`, `N=98304`, `D=2048`, `F=768`, `E=128`.
+
+With EP>1, two extra all-to-alls appear in backward: combine's all-to-all backward sends
+`d_routed_out` to the expert owners (dispatch direction), and dispatch's all-to-all
+backward returns `d_routed_in` to the token owners (combine direction).
