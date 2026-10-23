@@ -589,6 +589,48 @@ Checks:
 - `dx_t = dout_t * sum_k s_tk * w_e`: t0 `1 * (0.6*2 + 0.4*1) = 1.6`
 - `dscore[t,k] = dout_t * Expert_k(x_t)`: t0 slot0 (e1) `1*2 = 2`, slot1 (e0) `1*1 = 1`
 
+### B3 detail - expert dInput and dWeight (chain rule)
+Forward for row `r` in expert `e`'s segment: `y_r = w_e * x_r`.
+
+**dInput** (each row independent):
+`d x_r = d y_r * (d y_r / d x_r) = d y_r * w_e`
+```
+segment e0 (w0= 1): rows x=[1,3], dy=[0.4,-0.5] -> dx = [0.4, -0.5]
+segment e1 (w1= 2): rows x=[1,2], dy=[0.6, 0.6] -> dx = [1.2,  1.2]
+segment e2 (w2=-1): rows x=[2,3], dy=[1.4,-0.5] -> dx = [-1.4, 0.5]
+```
+
+**dWeight** (`w_e` is shared by every row in its segment, so contributions add):
+`d w_e = sum over r in segment e of d y_r * (d y_r / d w_e) = sum_r d y_r * x_r`
+```
+dw0 = 0.4*1 + (-0.5)*3 = -1.1
+dw1 = 0.6*1 +   0.6 *2 =  1.8
+dw2 = 1.4*2 + (-0.5)*3 =  1.3
+```
+Only rows routed to `e` contribute; an expert with 0 tokens gets `dW_e = 0`.
+
+**Matrix version** (what the kernel does; layout `X_e (R_e, K) @ W_e (K, N)`):
+```
+forward  Y_e  = X_e @ W_e          gmm
+dInput   dX_e = dY_e @ W_e^T       gmm, transpose_rhs=True   (contract over N)
+dWeight  dW_e = X_e^T @ dY_e       tgmm                      (contract over the R_e rows)
+```
+Example, expert 0, two rows, `K = N = 2`:
+```
+X  = [[1,0],[3,1]]   W = [[1,2],[0,1]]   Y = X W = [[1,2],[3,7]]
+dY = [[0.4,0.1],[-0.5,0.2]]
+dX = dY W^T = [[0.4*1+0.1*2, 0.4*0+0.1*1], [-0.5*1+0.2*2, -0.5*0+0.2*1]]
+            = [[0.6, 0.1], [-0.1, 0.2]]
+dW = X^T dY : dW[i][j] = sum_r X[r][i] * dY[r][j]
+            = [[1*0.4+3*(-0.5), 1*0.1+3*0.2], [0*0.4+1*(-0.5), 0*0.1+1*0.2]]
+            = [[-1.1, 0.7], [-0.5, 0.2]]
+```
+`dW[0][0] = -1.1` matches the scalar `dw0`. tgmm is "transposed" because the group
+boundaries lie on the contracted (row) dimension, producing one `(K, N)` result per expert.
+
+Code: `experiments/tpu/kernels/expert_segment_matmul.py` forward L54-L60, dX gmm L77-L90,
+dW tgmm L91-L110 (`jnp.swapaxes(lhs, 0, 1)` = `X^T`, FP32 accumulate, store in weight dtype).
+
 ### B5 router detail for t0
 Assume full softmax `p = [0.36, 0.54, 0.10]` (top-2 = e1, e0; route_norm `0.54/0.9=0.6`, `0.36/0.9=0.4`).
 ```
