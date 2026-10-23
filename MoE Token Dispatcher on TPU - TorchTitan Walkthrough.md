@@ -694,6 +694,22 @@ L198-L207 (`index_select` -> `reshape(T, K, D)` -> `.float().sum(dim=1)`).
 
 ### B5 router detail for t0
 Assume full softmax `p = [0.36, 0.54, 0.10]` (top-2 = e1, e0; route_norm `0.54/0.9=0.6`, `0.36/0.9=0.4`).
+
+**What `s` and `ds` are (t0):**
+- `p_topk = [0.54, 0.36]`: raw softmax probs of the chosen experts (slot0 = e1, slot1 = e0),
+  i.e. `scores_TE.gather(...)` (`moe.py` L691).
+- `s = p_topk / sum(p_topk) = [0.54, 0.36] / 0.9 = [0.6, 0.4]`: route-normalized
+  `topk_scores_TK[0]` (`moe.py` L693-L695), the weights used in combine.
+- `ds = dL/ds = [2, 1]`: row t0 of B4b. Since `out_0 = s0 * E1(x0) + s1 * E0(x0)`,
+  `dL/ds_k = dout_0 * E_k(x0) = 1 * [2, 1]`. Trace: B2b sorted `d_scores_N = [1,-3,2,8,-4,3]`;
+  `t0k0` sits in sorted row 2 -> `2`, `t0k1` in row 0 -> `1`.
+
+**route_norm backward derivation:** `s_k = p_k / P`, `P = sum_j p_j` (top-K only).
+`ds_k/dp_j = (delta_kj - s_k) / P`, so
+`dp_j = sum_k ds_k * ds_k/dp_j = (ds_j - sum_k ds_k * s_k) / P`.
+Subtracting the weighted mean `sum ds*s` reflects that normalization only redistributes:
+scaling both `p` equally leaves `s` (and the loss) unchanged.
+
 ```
 route_norm backward: dp_k = (ds_k - sum_j ds_j * s_j) / sum(p_topk)
   ds = [2, 1], s = [0.6, 0.4], sum ds*s = 1.6, sum(p_topk) = 0.9
