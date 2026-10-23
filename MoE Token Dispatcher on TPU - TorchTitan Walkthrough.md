@@ -655,6 +655,43 @@ boundaries lie on the contracted (row) dimension, producing one `(K, N)` result 
 Code: `experiments/tpu/kernels/expert_segment_matmul.py` forward L54-L60, dX gmm L77-L90,
 dW tgmm L91-L110 (`jnp.swapaxes(lhs, 0, 1)` = `X^T`, FP32 accumulate, store in weight dtype).
 
+### B4a detail - inverse gather, reshape (T, K), sum -> dx_moe
+Input: `d_routed_in` in **sorted (expert-major)** order. Each sorted row `j` is the route
+`perm[j]` (flat index `i = t*K + k`):
+```
+sorted row j   :  0     1     2     3     4     5
+d_routed_in    :  0.4  -0.5   1.2   1.2  -1.4   0.5
+perm[j] = i    :  1     4     0     3     2     5
+(t, k)         : t0k1  t2k0  t0k0  t1k1  t1k0  t2k1
+```
+
+1. Inverse gather `g[i] = d_routed_in[inverse[i]]`, `inverse = argsort(perm) = [2,0,4,3,1,5]`
+   (`inverse[i]` = sorted row holding route `i`):
+   ```
+   i      : 0(t0k0)  1(t0k1)  2(t1k0)  3(t1k1)  4(t2k0)  5(t2k1)
+   from j : 2        0        4        3        1        5
+   g      : 1.2      0.4     -1.4      1.2     -0.5      0.5
+   ```
+   Pure permutation: every row read exactly once, no collisions.
+2. Reshape `(N,) -> (T, K)` (valid because flat order is `t*K + k`, exactly K per token):
+   ```
+   t0: [ 1.2, 0.4]
+   t1: [-1.4, 1.2]
+   t2: [-0.5, 0.5]
+   ```
+3. Sum over K (in FP32): `dx_moe = [1.6, -0.2, 0.0]`.
+
+Why sum: forward made K copies of `x_t` (`x[token_idx]`); a copy's backward adds the
+gradients of all copies (multi-path chain rule again). Check t0:
+`dout_0 * (0.6*w1 + 0.4*w0) = 1 * (1.2 + 0.4) = 1.6`.
+
+Native autograd instead does `index_add` of the sorted rows into `token_idx = [0,2,0,1,1,2]`
+(rows 0 and 2 both write t0, etc.) = collision scatter, slow on TPU. Permutation gather +
+dense reshape-sum avoids it, and sums in top-k slot order.
+
+Code: `experiments/tpu/token_dispatcher.py` L183-L185 (forward saves `inverse_N`),
+L198-L207 (`index_select` -> `reshape(T, K, D)` -> `.float().sum(dim=1)`).
+
 ### B5 router detail for t0
 Assume full softmax `p = [0.36, 0.54, 0.10]` (top-2 = e1, e0; route_norm `0.54/0.9=0.6`, `0.36/0.9=0.4`).
 ```
