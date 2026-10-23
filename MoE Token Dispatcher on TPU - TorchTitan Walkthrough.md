@@ -594,6 +594,16 @@ Forward for row `r` in expert `e`'s segment: `y_r = w_e * x_r`.
 
 **dInput** (each row independent):
 `d x_r = d y_r * (d y_r / d x_r) = d y_r * w_e`
+
+> Notation: `d x_r` is shorthand for `dL/dx_r` (gradient of the loss w.r.t. `x_r`),
+> `d y_r` for `dL/dy_r` (arrives from the step above, here `d_routed_out`), and
+> `dy_r/dx_r` is the local derivative of this op. Chain rule: `L` depends on `x_r` only
+> through `y_r`, so `dL/dx_r = dL/dy_r * dy_r/dx_r`; for `y = w * x`, `dy/dx = w`.
+>
+> Finite-difference check (row 2: expert e1, `x = 1`, `w1 = 2`, `dL/dy = 0.6`):
+> nudge `x` by `0.01` -> `y` moves `2 * 0.01 = 0.02` -> `L` moves `0.6 * 0.02 = 0.012`
+> -> `dL/dx = 0.012 / 0.01 = 1.2 = 0.6 * 2`. Rates multiply along the chain.
+> Matrix form: `dX = dY @ W^T` (each input element feeds several outputs; sum their paths).
 ```
 segment e0 (w0= 1): rows x=[1,3], dy=[0.4,-0.5] -> dx = [0.4, -0.5]
 segment e1 (w1= 2): rows x=[1,2], dy=[0.6, 0.6] -> dx = [1.2,  1.2]
