@@ -25,6 +25,7 @@ Code paths are relative to the torchtitan repo root.
 12. [[#12. Code map - router example step by step]]
 13. [[#13. Backward pass through MoE - numerical example (EP=1, TPU path)]]
 14. [[#14. How all-to-all moves data across ranks]]
+15. [[#15. DP vs TP - what gets split]]
 
 ---
 
@@ -820,3 +821,63 @@ Wire traffic: r0 -> r1 2 rows, r1 -> r0 4 rows; self chunks stay local.
 Per rank per layer: `N = 12288 * 8 = 98304` rows x `D = 2048` x 2 bytes (BF16)
 = 384 MiB sent in dispatch (about 127/128 leaves the chip), same again in combine,
 and the same pair again in backward.
+
+---
+
+## 15. DP vs TP - what gets split
+
+- **DP (data parallel)**: split the **data** (tokens/batch); every chip runs the whole model.
+- **TP (tensor parallel)**: split the **weights** of each layer; every chip sees the same tokens.
+
+### Example: `Y = X @ W`, 2 chips
+```
+X (4 tokens a,b,c,d, D=2) = [[1,0],[0,1],[1,1],[2,0]]
+W (2x2)                   = [[1,2],[3,4]]
+Y = X W = a [1,2], b [3,4], c [4,6], d [2,4]
+```
+
+**DP**: chip0 gets tokens a,b; chip1 gets c,d; both hold full `W`.
+```
+chip0: [[1,0],[0,1]] @ W = a [1,2], b [3,4]
+chip1: [[1,1],[2,0]] @ W = c [4,6], d [2,4]
+```
+Forward needs no communication. Backward (`dY` = all ones):
+```
+chip0 dW = X0^T dY0 = [[1,1],[1,1]]
+chip1 dW = X1^T dY1 = [[3,3],[1,1]]
+all-reduce (sum) -> [[4,4],[2,2]]  = full X^T dY
+```
+FSDP (`dp_shard`) = DP that also shards `W` storage: all-gather `W` before use,
+reduce-scatter `dW` after.
+
+**TP**: both chips get all 4 tokens; `W` split by columns (column-parallel).
+```
+chip0 holds W[:,0] = [1,3] -> Y[:,0] = [1,3,4,2]
+chip1 holds W[:,1] = [2,4] -> Y[:,1] = [2,4,6,4]
+```
+Next layer `Z = Y @ V`, `V = [[1],[1]]` split by rows (row-parallel):
+```
+chip0: Y[:,0] * V[0] = [1,3,4,2]    (partial sum)
+chip1: Y[:,1] * V[1] = [2,4,6,4]    (partial sum)
+all-reduce -> Z = [3,7,10,6]
+```
+Column-parallel then row-parallel = the Megatron MLP/attention pattern: one activation
+all-reduce per sublayer in forward, one in backward.
+
+### Comparison
+| | DP / FSDP | TP |
+|---|---|---|
+| split | tokens (batch) | weight matrices (hidden / heads) |
+| replicated | weights (DP) or nothing at rest (FSDP) | activations (unless SP) |
+| comm | grad all-reduce per step (DP); weight all-gather + grad reduce-scatter per layer (FSDP) | activation all-reduce per sublayer, fwd and bwd, on the critical path |
+| comm depends on | parameter size | tokens x hidden |
+| scale limit | global batch size | hidden size / number of heads; needs fast interconnect |
+| memory saved | optimizer/param/grad (FSDP) | params + per-layer activations (with SP) |
+
+### In TorchTitan
+- `data_parallel_shard_degree` = FSDP; `data_parallel_replicate_degree` = DDP/HSDP replicas;
+  `tensor_parallel_degree` = TP (with SP for norms/residual).
+- Q30 TPU recipe: FSDP only (`dp_shard=-1`, `tp=1`); 128 chips each own a different
+  batch of `6 x 2048` tokens.
+- EP (section 8) borrows chips from `dp_shard * cp * tp`: on DP chips tokens differ because
+  data differs; on TP chips they differ because of the SP split.
