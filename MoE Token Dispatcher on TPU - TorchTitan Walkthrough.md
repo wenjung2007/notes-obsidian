@@ -26,6 +26,7 @@ Code paths are relative to the torchtitan repo root.
 13. [[#13. Backward pass through MoE - numerical example (EP=1, TPU path)]]
 14. [[#14. How all-to-all moves data across ranks]]
 15. [[#15. DP vs TP - what gets split]]
+16. [[#16. How FSDP shards weight storage]]
 
 ---
 
@@ -881,3 +882,56 @@ all-reduce per sublayer in forward, one in backward.
   batch of `6 x 2048` tokens.
 - EP (section 8) borrows chips from `dp_shard * cp * tp`: on DP chips tokens differ because
   data differs; on TP chips they differ because of the SP split.
+
+---
+
+## 16. How FSDP shards weight storage
+
+**Rule:** each parameter is split along one dimension (default dim 0, rows) into
+`fsdp_degree` equal slices; rank r stores slice r (as a DTensor with placement `Shard(dim)`).
+Optimizer state (Adam m, v) and the gradient shard live only for that slice.
+
+### Example: `W (2x2) = [[1,2],[3,4]]`, 2 chips, `Shard(0)`
+```
+at rest:     chip0 stores row 0 = [1,2]        chip1 stores row 1 = [3,4]
+forward:     all-gather -> both have [[1,2],[3,4]]; compute on own tokens; free full W
+backward:    all-gather W again (unless kept), each chip computes full-size partial dW
+               chip0 dW = [[1,1],[1,1]]   chip1 dW = [[3,3],[1,1]]
+             reduce-scatter (sum, then split by rows):
+               chip0 gets row 0 of sum = [4,4]    chip1 gets row 1 = [2,2]
+optimizer:   chip0 updates only [1,2] with [4,4]; chip1 only [3,4] with [2,2]
+```
+Memory per chip: `1/fsdp_degree` of params, grads, optimizer state; full weights exist
+only briefly per layer.
+
+### Which dimension (TorchTitan SimpleFSDP, used by the TPU recipe)
+- default `Shard(0)`; `data_parallel` builds it per parameter
+  (`experiments/graph_trainer/simple_fsdp.py` L414-L506)
+- if the chosen dim is smaller than the mesh -> `Replicate()` instead (L489-L494)
+- a module may set `_fsdp_shard_dim` to use another axis when dim 0 does not divide:
+  - `tok_embeddings` / `lm_head` move to dim 1 if vocab % fsdp != 0
+    (`experiments/tpu/graph_trainer/scan_fsdp.py` L417-L483)
+  - Qwen experts: dim 0 (`E`) if `num_experts % fsdp == 0`, else dim 1
+    (`experiments/tpu/qwen3/infra/parallelize.py` L19-L71)
+
+### When the all-gather / reduce-scatter happen
+`ReplicateComputation.replicate_compute` (`simple_fsdp.py` L309-L375):
+`sharded.redistribute(placements=Replicate, forward_dtype=param_dtype,
+backward_dtype=reduce_dtype)` = all-gather in forward (BF16), and since grads are
+`Partial(sum)` (L295-L297), its backward is a reduce-scatter (in `reduce_dtype`).
+It runs as a parametrization every time the module reads the weight.
+
+### Qwen3-30B-A3B, fsdp = 128 (EP = 1)
+| Parameter | Full shape | Shard dim | Stored per chip |
+|---|---|---|---|
+| `tok_embeddings` | `(151936, 2048)` | 0 (151936 = 128 * 1187) | `(1187, 2048)` |
+| expert `w1` (native layout) | `(128, 2048, 768)` | 0 (128 % 128 == 0) | `(1, 2048, 768)`, one expert |
+| router gate | `(128, 2048)` | 0 | `(1, 2048)` |
+
+- At rest each chip stores 1 of the 128 experts per layer, but with EP = 1 every chip
+  computes with all experts, so it all-gathers the full expert bank (about 604M params,
+  1.2 GB BF16) for each MoE layer. EP instead keeps experts resident and moves tokens.
+- The recipe sets `fsdp_reshard_after_forward="never"` (ZeRO-2 style): forward-gathered
+  weights are kept for backward (no second all-gather), trading memory for comm.
+- FSDP2 `fully_shard` (non-simple path) uses the same per-parameter dim-0 sharding but
+  batches a module's parameters into one all-gather buffer.
