@@ -28,6 +28,7 @@ Code paths are relative to the torchtitan repo root.
 15. [[#15. DP vs TP - what gets split]]
 16. [[#16. How FSDP shards weight storage]]
 17. [[#17. How SP and TP work together]]
+18. [[#18. Does TP apply to the FFN too? Yes (except when EP takes the tp axis)]]
 
 ---
 
@@ -987,3 +988,26 @@ norm compute between matmuls divided by `tp`.
   rejoin them before every matmul. DP chips hold different sequences and never rejoin.
 - Under EP the MoE consumes the SP-sharded tokens directly (no all-gather), so each token
   has exactly one owner for dispatch (section 9).
+
+---
+
+## 18. Does TP apply to the FFN too? Yes (except when EP takes the tp axis)
+
+Per-layer TP plan (`models/qwen3/sharding.py` L72-L113):
+
+| Part | TP when tp > 1 | Code |
+|---|---|---|
+| norms | SP (sequence-sharded) | L75-L77 `norm_config` |
+| attention q/k/v, o | colwise / rowwise | L79 `set_gqa_attention_sharding` |
+| dense FFN `w1, w3` / `w2` | colwise / rowwise (split F) | L94-L104 -> `models/common/decoder_sharding.py` L329-L362 |
+| MoE router gate | replicated | `models/common/moe_sharding.py` L353 |
+| MoE shared experts | colwise / rowwise like dense FFN | `moe_sharding.py` L354 |
+| MoE routed experts, **EP off** | expert-TP: `w1_EFD Shard(1)`, `w3_EFD Shard(1)`, `w2_EDF Shard(2)` (split F, tokens replicated) | `moe_sharding.py` L357-L366 |
+| MoE routed experts, **EP on** | no TP on experts: whole experts split across the EP group, which borrows tp chips; tokens stay SP-sharded and are routed by all-to-all | `moe_sharding.py` L357-L359 |
+
+Dense FFN TP example (2 chips, F = 4): chip0 holds `w1/w3` rows `F[0:2]` and `w2`
+columns `F[0:2]`; chip1 holds `F[2:4]`. Each computes `silu(x W1_half^T) * (x W3_half^T)`
+on its half of F (no comm, SwiGLU is elementwise in F), then `@ W2_half^T` gives a partial
+`(T, D)`; reduce-scatter (SP) or all-reduce combines.
+
+The earlier "experts are NOT tensor-parallel" (section 8) is only the EP-on case.
