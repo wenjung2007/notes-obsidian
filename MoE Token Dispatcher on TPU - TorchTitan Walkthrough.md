@@ -27,6 +27,7 @@ Code paths are relative to the torchtitan repo root.
 14. [[#14. How all-to-all moves data across ranks]]
 15. [[#15. DP vs TP - what gets split]]
 16. [[#16. How FSDP shards weight storage]]
+17. [[#17. How SP and TP work together]]
 
 ---
 
@@ -935,3 +936,54 @@ It runs as a parametrization every time the module reads the weight.
   weights are kept for backward (no second all-gather), trading memory for comm.
 - FSDP2 `fully_shard` (non-simple path) uses the same per-parameter dim-0 sharding but
   batches a module's parameters into one all-gather buffer.
+
+---
+
+## 17. How SP and TP work together
+
+Key idea: **same chips (the tp group), different regions of the layer.** Activations
+alternate between two layouts:
+- **TP region** (big matmuls): tokens full (Replicate), weights split by hidden/heads.
+- **SP region** (norm, residual add, dropout): tokens split by sequence (`Shard(seq)`);
+  weights there are tiny (norm scale) and replicated.
+
+Switching layouts = the TP communication, split in two:
+- SP -> TP: **all-gather(seq)** before the column-parallel matmul
+- TP -> SP: **reduce-scatter(seq)** after the row-parallel matmul (replaces TP's all-reduce)
+
+```
+x: Shard(seq) --norm (local)--> all-gather --> [col-parallel W | attn/act | row-parallel V]
+                                                 tokens Replicate, weights Shard
+   <--residual add (local)-- reduce-scatter <-- Partial sum
+```
+
+### Example: 2 tp chips, tokens a,b,c,d, `D = 2`
+`W = [[1,2],[3,4]]` column-split (chip0 `[1,3]`, chip1 `[2,4]`);
+`V = I` row-split (chip0 row `[1,0]`, chip1 row `[0,1]`).
+
+```
+SP region:     chip0 holds a,b        chip1 holds c,d          norm on 2 tokens each
+all-gather:    both hold X = a[1,0] b[0,1] c[1,1] d[2,0]
+col-parallel:  chip0 Y[:,0] = [1,3,4,2]      chip1 Y[:,1] = [2,4,6,4]
+row-parallel:  chip0 partial = a[1,0] b[3,0] c[4,0] d[2,0]
+               chip1 partial = a[0,2] b[0,4] c[0,6] d[0,4]
+TP only:       all-reduce -> both hold a[1,2] b[3,4] c[4,6] d[2,4]   (residual/norm x2)
+TP + SP:       reduce-scatter(seq) -> chip0 a[1,2] b[3,4]; chip1 c[4,6] d[2,4]
+               residual + next norm on 2 tokens each, then all-gather for next sublayer
+```
+Same comm volume (all-reduce = reduce-scatter + all-gather), activation memory and
+norm compute between matmuls divided by `tp`.
+
+### Canonical plan (DTensor), `experiments/tpu/tests/test_dtensor_distributed.py` L236-L257
+| module | style | meaning |
+|---|---|---|
+| `ln_1`, `ln_2` | `SequenceParallel()` | norm runs on `Shard(1)` (sequence) input |
+| `attention`, `mlp` input | `PrepareModuleInput(Shard(1) -> Replicate())` | all-gather sequence |
+| `q/k/v_proj`, `dense_h_to_4h` | `ColwiseParallel()` | weight split by output cols (heads / hidden) |
+| `out_proj`, `dense_4h_to_h` | `RowwiseParallel(output_layouts=Shard(1))` | partial sum -> reduce-scatter to sequence shards |
+
+### Contrast with DP and the MoE case
+- SP is not data parallelism: the tp chips hold slices of the **same** sequences, and
+  rejoin them before every matmul. DP chips hold different sequences and never rejoin.
+- Under EP the MoE consumes the SP-sharded tokens directly (no all-gather), so each token
+  has exactly one owner for dispatch (section 9).
