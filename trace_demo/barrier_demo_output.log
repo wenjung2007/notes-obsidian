@@ -1,0 +1,16 @@
+3
+Successfully renamed PrivateUse1 backend to 'tpu'. Device: device(type='tpu')
+Registered Python module for 'tpu'.
+Device type: tpu, Device index: default
+Initializing TPU distributed runtime
+Traceback (most recent call last):
+  File "/home/wenjung_google_com/barrier_demo.py", line 26, in <module>
+    barrier_op = torch.ops.tpu._optimization_barrier
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/torch/_ops.py", line 1385, in __getattr__
+    raise AttributeError(
+AttributeError: '_OpNamespace' 'tpu' object has no attribute '_optimization_barrier'
+num_cache_hits=0 {NA}
+peak_compilation_memory_bytes=unknown
+
+FINISHED

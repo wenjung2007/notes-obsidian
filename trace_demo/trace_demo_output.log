@@ -1,0 +1,74 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1791781876.276596 4021493 pjrt_api.cc:119] GetPjrtApi was found for TPU at /home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/libtpu/libtpu.so
+I0000 00:00:1791781876.321734 4021493 device_rt.cc:133] PjRt runtime initialization deferred for tpu
+Successfully renamed PrivateUse1 backend to 'tpu'. Device: device(type='tpu')
+Registered Python module for 'tpu'.
+I0000 00:00:1791781876.324573 4021493 libtpu_version.cc:107] Setting libtpu version to: 0.0.47
+I0000 00:00:1791781876.328000 4021493 pjrt_api.cc:168] The PJRT plugin has PJRT API version 0.114. The framework PJRT API version is 0.114.
+I0000 00:00:1791781880.245245 4021493 pjrt_c_api_client.cc:188] PjRtCApiClient created.
+W0000 00:00:1791781880.245282 4021493 pjrt_state.cc:280] Only using 1 device out of all the 4 addressable devices.
+Device type: tpu, Device index: default
+Initializing TPU distributed runtime
+======================================================================
+STEP 1: TRACE with make_fx on FakeTensors
+======================================================================
+    [python body running, call #1; x is FakeTensor]
+
+--- traced graph as Python code (gm.code) ---
+
+
+
+def forward(self, W_1, x_1, t_1, n_1):
+    w_1 = W_1
+    mm = torch.ops.aten.mm.default(x_1, w_1);  w_1 = None
+    sub = torch.ops.aten.sub.Tensor(mm, t_1);  mm = t_1 = None
+    pow_1 = torch.ops.aten.pow.Tensor_Scalar(sub, 2)
+    sum_1 = torch.ops.aten.sum.default(pow_1);  pow_1 = None
+    div = torch.ops.aten.div.Tensor(sum_1, n_1);  sum_1 = None
+    ones_like = torch.ops.aten.ones_like.default(div, pin_memory = False, memory_format = torch.preserve_format)
+    div_1 = torch.ops.aten.div.Tensor(ones_like, n_1);  ones_like = n_1 = None
+    expand = torch.ops.aten.expand.default(div_1, [1, 1]);  div_1 = None
+    pow_2 = torch.ops.aten.pow.Tensor_Scalar(sub, 1.0);  sub = None
+    mul = torch.ops.aten.mul.Scalar(pow_2, 2.0);  pow_2 = None
+    mul_1 = torch.ops.aten.mul.Tensor(expand, mul);  expand = mul = None
+    t = torch.ops.aten.t.default(x_1);  x_1 = None
+    mm_1 = torch.ops.aten.mm.default(t, mul_1);  t = mul_1 = None
+    return [div, mm_1]
+    
+--- traced graph node table (gm.graph) ---
+  #  op             name             target                             shape
+  0  placeholder    w_1              W_1                                (4, 1)
+  1  placeholder    x_1              x_1                                (1, 4)
+  2  placeholder    t_1              t_1                                (1, 1)
+  3  placeholder    n_1              n_1                                ()
+  4  call_function  mm               mm.default                         (1, 1)
+  5  call_function  sub              sub.Tensor                         (1, 1)
+  6  call_function  pow_1            pow.Tensor_Scalar                  (1, 1)
+  7  call_function  sum_1            sum.default                        ()
+  8  call_function  div              div.Tensor                         ()
+  9  call_function  ones_like        ones_like.default                  ()
+ 10  call_function  div_1            div.Tensor                         ()
+ 11  call_function  expand           expand.default                     (1, 1)
+ 12  call_function  pow_2            pow.Tensor_Scalar                  (1, 1)
+ 13  call_function  mul              mul.Scalar                         (1, 1)
+ 14  call_function  mul_1            mul.Tensor                         (1, 1)
+ 15  call_function  t                t.default                          (4, 1)
+ 16  call_function  mm_1             mm.default                         (4, 1)
+ 17  output         output           output                             
+
+======================================================================
+STEP 2+: RUN the traced graph on real tensors
+======================================================================
+chip0 token: loss = 3.1250, dL/dW = [-2.5, -5.0, 0.0, -2.5]
+chip1 token: loss = 0.5000, dL/dW = [0.0, 1.0, 1.0, 0.0]
+python body calls during RUN: 0  (0 = the graph replays without re-running Python)
+
+======================================================================
+CHECK: eager loss.backward() gives the same gradient
+======================================================================
+eager: loss = 3.1250, W.grad = [-2.5, -5.0, 0.0, -2.5]
+I0000 00:00:1791781880.278656 4021493 compilation_cache.cc:340] Compilation cache evicted.
+I0000 00:00:1791781880.278669 4021493 compilation_cache.cc:204] CompilationCache final stats: num_cache_reqs=0
+num_cache_hits=0 {NA}
+peak_compilation_memory_bytes=unknown
+

@@ -1,0 +1,257 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1792707780.489173   90184 pjrt_api.cc:119] GetPjrtApi was found for TPU at /home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/libtpu/libtpu.so
+I0000 00:00:1792707780.945330   90184 device_rt.cc:133] PjRt runtime initialization deferred for tpu
+Successfully renamed PrivateUse1 backend to 'tpu'. Device: device(type='tpu')
+Registered Python module for 'tpu'.
+I0000 00:00:1792707780.956645   90184 libtpu_version.cc:107] Setting libtpu version to: 0.0.47
+I0000 00:00:1792707780.973355   90184 pjrt_api.cc:168] The PJRT plugin has PJRT API version 0.114. The framework PJRT API version is 0.114.
+E0000 00:00:1792707847.305173   90184 pjrt_state.cc:298] PjrtBackend::GetClient failed to initialize: INTERNAL: retrieving a PjRtClient failed with: TPU initialization failed: GRPC_ERROR error message: START_SESSION failed. Contact GCE with UUID: 33069622802218433511709601752416258 if this is recurring. Max # of tries(=3) exhausted.
+=== Source Location Trace: ===
+csrc/common/status_builder.cc:99
+
+E0000 00:00:1792707847.362935   90184 pjrt_state.cc:298] PjrtBackend::GetClient failed to initialize: INTERNAL: retrieving a PjRtClient failed with: TPU initialization failed: GRPC_ERROR error message: START_SESSION failed. Contact GCE with UUID: 33069622802218433511709601752416258 if this is recurring. Max # of tries(=3) exhausted.
+=== Source Location Trace: ===
+csrc/common/status_builder.cc:99
+
+E0000 00:00:1792707847.362968   90184 pjrt_state.cc:314] PjrtBackend::GetDevice failed to initialize: INTERNAL: retrieving a PjRtClient failed with: TPU initialization failed: GRPC_ERROR error message: START_SESSION failed. Contact GCE with UUID: 33069622802218433511709601752416258 if this is recurring. Max # of tries(=3) exhausted.
+=== Source Location Trace: ===
+csrc/common/status_builder.cc:99
+
+Traceback (most recent call last):
+  File "/home/wenjung_google_com/trace_demo/dynamo_vs_makefx.py", line 223, in <module>
+    gm_a, outs_a, how_a, cap_b, outs_b = run_on(dev)
+                                         ^^^^^^^^^^^
+  File "/home/wenjung_google_com/trace_demo/dynamo_vs_makefx.py", line 209, in run_on
+    model_a, model_b = copy.deepcopy(base).to(dev), copy.deepcopy(base).to(dev)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1383, in to
+    return self._apply(convert)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+RuntimeError: to_copy(): transfer to 'tpu' device failed with: pjrt client not initialized in TpuMallocAndMemcpyHtoD
+E0000 00:00:1792707847.505907   90184 pjrt_state.cc:298] PjrtBackend::GetClient failed to initialize: INTERNAL: retrieving a PjRtClient failed with: TPU initialization failed: GRPC_ERROR error message: START_SESSION failed. Contact GCE with UUID: 33069622802218433511709601752416258 if this is recurring. Max # of tries(=3) exhausted.
+=== Source Location Trace: ===
+csrc/common/status_builder.cc:99
+
+E0000 00:00:1792707847.760903   90184 pjrt_state.cc:298] PjrtBackend::GetClient failed to initialize: INTERNAL: retrieving a PjRtClient failed with: TPU initialization failed: GRPC_ERROR error message: START_SESSION failed. Contact GCE with UUID: 33069622802218433511709601752416258 if this is recurring. Max # of tries(=3) exhausted.
+=== Source Location Trace: ===
+csrc/common/status_builder.cc:99
+
+[W1022 22:24:07.590059579 tpu_hooks.cc:79] Warning: PJRT client not available, using TPU device index 0 unchecked (function ValidateDeviceIndex)
+E0000 00:00:1792707847.969175   90184 pjrt_state.cc:298] PjrtBackend::GetClient failed to initialize: INTERNAL: retrieving a PjRtClient failed with: TPU initialization failed: GRPC_ERROR error message: START_SESSION failed. Contact GCE with UUID: 33069622802218433511709601752416258 if this is recurring. Max # of tries(=3) exhausted.
+=== Source Location Trace: ===
+csrc/common/status_builder.cc:99
+
+[W1022 22:24:07.798343618 tpu_hooks.cc:79] Warning: PJRT client not available, using TPU device index 0 unchecked (function ValidateDeviceIndex)
+Device type: tpu, Device index: default
+Initializing TPU distributed runtime
+!!! run on device 'tpu' failed:
+==============================================================================
+torch 2.12.0+cpu | device=cpu | N_LAYERS=2 | B=8 D=16 H=64 | path A via torchtitan minimal_fx_tracer
+==============================================================================
+
+==============================================================================
+1. RAW GRAPHS
+==============================================================================
+
+### PATH B-1  Dynamo graph (torch-level, forward only): 14 nodes
+  #0  l_self_modules_layers_modules_0_parameters_w1_ = placeholder (16, 64)    [seq=11 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #1  l_x_ = placeholder (8, 16)    [seq=11 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #2  l_self_modules_layers_modules_0_parameters_w2_ = placeholder (64, 16)    [seq=13 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #3  l_self_modules_layers_modules_1_parameters_w1_ = placeholder (16, 64)    [seq=15 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #4  l_self_modules_layers_modules_1_parameters_w2_ = placeholder (64, 16)    [seq=17 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #5  matmul = operator.matmul(l_x_, l_self_modules_layers_modules_0_parameters_w1_) (8, 64)    [seq=11 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #6  relu = torch.relu(matmul) (8, 64)    [seq=12 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #7  matmul_1 = operator.matmul(relu, l_self_modules_layers_modules_0_parameters_w2_) (8, 16)    [seq=13 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #8  h = operator.add(l_x_, matmul_1) (8, 16)    [seq=14 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #9  matmul_2 = operator.matmul(h, l_self_modules_layers_modules_1_parameters_w1_) (8, 64)    [seq=15 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #10 relu_1 = torch.relu(matmul_2) (8, 64)    [seq=16 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #11 matmul_3 = operator.matmul(relu_1, l_self_modules_layers_modules_1_parameters_w2_) (8, 16)    [seq=17 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #12 h_1 = operator.add(h, matmul_3) (8, 16)    [seq=18 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #13 output([h_1])
+
+### PATH B-2  AOTAutograd FORWARD graph (ATen): 16 nodes
+  #0  primals_1 = placeholder (16, 64)
+  #1  primals_2 = placeholder (8, 16)
+  #2  primals_3 = placeholder (64, 16)
+  #3  primals_4 = placeholder (16, 64)
+  #4  primals_5 = placeholder (64, 16)
+  #5  mm = aten.mm.default(primals_2, primals_1) (8, 64)    [seq=28 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #6  relu = aten.relu.default(mm) (8, 64)    [seq=29 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #7  detach = aten.detach.default(relu) (8, 64)    [seq=29 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #8  mm_1 = aten.mm.default(relu, primals_3) (8, 16)    [seq=30 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #9  add = aten.add.Tensor(primals_2, mm_1) (8, 16)    [seq=31 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #10 mm_2 = aten.mm.default(add, primals_4) (8, 64)    [seq=32 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #11 relu_1 = aten.relu.default(mm_2) (8, 64)    [seq=33 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #12 detach_1 = aten.detach.default(relu_1) (8, 64)    [seq=33 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #13 mm_3 = aten.mm.default(relu_1, primals_5) (8, 16)    [seq=34 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #14 add_1 = aten.add.Tensor(add, mm_3) (8, 16)    [seq=35 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #15 output([add_1, primals_2, primals_3, primals_4, primals_5, relu, detach, add, relu_1, detach_1])
+
+### PATH B-3  AOTAutograd BACKWARD graph (ATen): 30 nodes
+  #0  primals_2 = placeholder (8, 16)
+  #1  primals_3 = placeholder (64, 16)
+  #2  primals_4 = placeholder (16, 64)
+  #3  primals_5 = placeholder (64, 16)
+  #4  relu = placeholder (8, 64)    [seq=29 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #5  detach = placeholder (8, 64)    [seq=29 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #6  add = placeholder (8, 16)    [seq=31 fqn=layers.0 nn_mod=L['self'].layers.0]
+  #7  relu_1 = placeholder (8, 64)    [seq=33 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #8  detach_1 = placeholder (8, 64)    [seq=33 fqn=layers.1 nn_mod=L['self'].layers.1]
+  #9  tangents_1 = placeholder (8, 16)
+  #10 t = aten.t.default(relu_1) (64, 8)    [seq=34 bwd fqn=layers.1]
+  #11 mm_4 = aten.mm.default(t, tangents_1) (64, 16)    [seq=34 bwd fqn=layers.1]
+  #12 t_1 = aten.t.default(primals_5) (16, 64)    [seq=34 bwd fqn=layers.1]
+  #13 mm_5 = aten.mm.default(tangents_1, t_1) (8, 64)    [seq=34 bwd fqn=layers.1]
+  #14 detach_2 = aten.detach.default(detach_1) (8, 64)    [seq=33 bwd fqn=layers.1]
+  #15 threshold_backward = aten.threshold_backward.default(mm_5, detach_2, 0) (8, 64)    [seq=33 bwd fqn=layers.1]
+  #16 t_2 = aten.t.default(add) (16, 8)    [seq=32 bwd fqn=layers.1]
+  #17 mm_6 = aten.mm.default(t_2, threshold_backward) (16, 64)    [seq=32 bwd fqn=layers.1]
+  #18 t_3 = aten.t.default(primals_4) (64, 16)    [seq=32 bwd fqn=layers.1]
+  #19 mm_7 = aten.mm.default(threshold_backward, t_3) (8, 16)    [seq=32 bwd fqn=layers.1]
+  #20 add_2 = aten.add.Tensor(tangents_1, mm_7) (8, 16)    [seq=35 bwd]
+  #21 t_4 = aten.t.default(relu) (64, 8)    [seq=30 bwd fqn=layers.0]
+  #22 mm_8 = aten.mm.default(t_4, add_2) (64, 16)    [seq=30 bwd fqn=layers.0]
+  #23 t_5 = aten.t.default(primals_3) (16, 64)    [seq=30 bwd fqn=layers.0]
+  #24 mm_9 = aten.mm.default(add_2, t_5) (8, 64)    [seq=30 bwd fqn=layers.0]
+  #25 detach_3 = aten.detach.default(detach) (8, 64)    [seq=29 bwd fqn=layers.0]
+  #26 threshold_backward_1 = aten.threshold_backward.default(mm_9, detach_3, 0) (8, 64)    [seq=29 bwd fqn=layers.0]
+  #27 t_6 = aten.t.default(primals_2) (16, 8)    [seq=28 bwd fqn=layers.0]
+  #28 mm_10 = aten.mm.default(t_6, threshold_backward_1) (16, 64)    [seq=28 bwd fqn=layers.0]
+  #29 output([mm_10, None, mm_8, mm_6, mm_4])
+
+### PATH A    make_fx JOINT graph (ATen: fwd + loss + bwd): 47 nodes
+  #0  arg0_1 = placeholder (16, 64)    [seq=-1]
+  #1  arg1_1 = placeholder (64, 16)    [seq=-1]
+  #2  arg2_1 = placeholder (16, 64)    [seq=-1]
+  #3  arg3_1 = placeholder (64, 16)    [seq=-1]
+  #4  arg4_1 = placeholder (8, 16)    [seq=-1]
+  #5  arg5_1 = placeholder (8, 16)    [seq=-1]
+  #6  arg6_1 = placeholder ()    [seq=-1]
+  #7  mm = aten.mm.default(arg4_1, arg0_1) (8, 64)    [seq=0 fqn=layers.0]
+  #8  relu = aten.relu.default(mm) (8, 64)    [seq=1 fqn=layers.0]
+  #9  detach = aten.detach.default(relu) (8, 64)    [seq=1 fqn=layers.0]
+  #10 mm_1 = aten.mm.default(relu, arg1_1) (8, 16)    [seq=2 fqn=layers.0]
+  #11 add = aten.add.Tensor(arg4_1, mm_1) (8, 16)    [seq=3 fqn=layers.0]
+  #12 mm_2 = aten.mm.default(add, arg2_1) (8, 64)    [seq=4 fqn=layers.1]
+  #13 relu_1 = aten.relu.default(mm_2) (8, 64)    [seq=5 fqn=layers.1]
+  #14 detach_1 = aten.detach.default(relu_1) (8, 64)    [seq=5 fqn=layers.1]
+  #15 mm_3 = aten.mm.default(relu_1, arg3_1) (8, 16)    [seq=6 fqn=layers.1]
+  #16 add_1 = aten.add.Tensor(add, mm_3) (8, 16)    [seq=7 fqn=layers.1]
+  #17 sub = aten.sub.Tensor(add_1, arg5_1) (8, 16)    [seq=8]
+  #18 pow_1 = aten.pow.Tensor_Scalar(sub, 2) (8, 16)    [seq=9]
+  #19 sum_1 = aten.sum.default(pow_1) ()    [seq=10]
+  #20 div = aten.div.Tensor(sum_1, arg6_1) ()    [seq=11]
+  #21 ones_like = aten.ones_like.default(div) ()    [seq=11]
+  #22 div_1 = aten.div.Tensor(ones_like, arg6_1) ()    [seq=11]
+  #23 expand = aten.expand.default(div_1, [8, 16]) (8, 16)    [seq=11]
+  #24 pow_2 = aten.pow.Tensor_Scalar(sub, 1.0) (8, 16)    [seq=11]
+  #25 mul = aten.mul.Scalar(pow_2, 2.0) (8, 16)    [seq=11]
+  #26 mul_1 = aten.mul.Tensor(expand, mul) (8, 16)    [seq=11]
+  #27 t = aten.t.default(relu_1) (64, 8)    [seq=11]
+  #28 mm_4 = aten.mm.default(t, mul_1) (64, 16)    [seq=11]
+  #29 t_1 = aten.t.default(arg3_1) (16, 64)    [seq=11]
+  #30 mm_5 = aten.mm.default(mul_1, t_1) (8, 64)    [seq=11]
+  #31 detach_2 = aten.detach.default(detach_1) (8, 64)    [seq=11]
+  #32 threshold_backward = aten.threshold_backward.default(mm_5, detach_2, 0) (8, 64)    [seq=11]
+  #33 t_2 = aten.t.default(add) (16, 8)    [seq=11]
+  #34 mm_6 = aten.mm.default(t_2, threshold_backward) (16, 64)    [seq=11]
+  #35 t_3 = aten.t.default(arg2_1) (64, 16)    [seq=11]
+  #36 mm_7 = aten.mm.default(threshold_backward, t_3) (8, 16)    [seq=11]
+  #37 add_2 = aten.add.Tensor(mul_1, mm_7) (8, 16)    [seq=11]
+  #38 t_4 = aten.t.default(relu) (64, 8)    [seq=11]
+  #39 mm_8 = aten.mm.default(t_4, add_2) (64, 16)    [seq=11]
+  #40 t_5 = aten.t.default(arg1_1) (16, 64)    [seq=11]
+  #41 mm_9 = aten.mm.default(add_2, t_5) (8, 64)    [seq=11]
+  #42 detach_3 = aten.detach.default(detach) (8, 64)    [seq=11]
+  #43 threshold_backward_1 = aten.threshold_backward.default(mm_9, detach_3, 0) (8, 64)    [seq=11]
+  #44 t_6 = aten.t.default(arg4_1) (16, 8)    [seq=11]
+  #45 mm_10 = aten.mm.default(t_6, threshold_backward_1) (16, 64)    [seq=11]
+  #46 output([div, mm_10, mm_8, mm_6, mm_4])    [seq=11]
+
+==============================================================================
+2. GRAPH COUNT / SIZE
+==============================================================================
+graph                               nodes  inputs   ops
+B-1 Dynamo (torch-level)               14       5     8
+B-2 AOT forward                        16       5    10
+B-3 AOT backward                       30      10    19
+A   make_fx joint                      47       7    39
+
+==============================================================================
+3. OP COUNTS (call_function / call_method nodes)
+==============================================================================
+op                                 Dynamo AOT fw AOT bw AOT sum make_fx  note
+aten.add.Tensor                         0      2      1       3       3  
+aten.detach.default                     0      2      2       4       4  
+aten.div.Tensor                         0      0      0       0       2  <- differs (AOT vs make_fx)
+aten.expand.default                     0      0      0       0       1  <- differs (AOT vs make_fx)
+aten.mm.default                         0      4      7      11      11  
+aten.mul.Scalar                         0      0      0       0       1  <- differs (AOT vs make_fx)
+aten.mul.Tensor                         0      0      0       0       1  <- differs (AOT vs make_fx)
+aten.ones_like.default                  0      0      0       0       1  <- differs (AOT vs make_fx)
+aten.pow.Tensor_Scalar                  0      0      0       0       2  <- differs (AOT vs make_fx)
+aten.relu.default                       0      2      0       2       2  
+aten.sub.Tensor                         0      0      0       0       1  <- differs (AOT vs make_fx)
+aten.sum.default                        0      0      0       0       1  <- differs (AOT vs make_fx)
+aten.t.default                          0      0      7       7       7  
+aten.threshold_backward.default         0      0      2       2       2  
+operator.add                            2      0      0       0       0  
+operator.matmul                         4      0      0       0       0  
+torch.relu                              2      0      0       0       0  
+
+==============================================================================
+4. GRAPH INPUTS (placeholders)
+==============================================================================
+B-1 Dynamo          : l_self_modules_layers_modules_0_parameters_w1_(16, 64), l_x_(8, 16), l_self_modules_layers_modules_0_parameters_w2_(64, 16), l_self_modules_layers_modules_1_parameters_w1_(16, 64), l_self_modules_layers_modules_1_parameters_w2_(64, 16)
+B-2 AOT forward     : primals_1(16, 64), primals_2(8, 16), primals_3(64, 16), primals_4(16, 64), primals_5(64, 16)
+B-3 AOT backward    : primals_2(8, 16), primals_3(64, 16), primals_4(16, 64), primals_5(64, 16), relu(8, 64), detach(8, 64), add(8, 16), relu_1(8, 64), detach_1(8, 64), tangents_1(8, 16)
+A   make_fx joint   : arg0_1(16, 64), arg1_1(64, 16), arg2_1(16, 64), arg3_1(64, 16), arg4_1(8, 16), arg5_1(8, 16), arg6_1()
+
+==============================================================================
+5. GRAPH OUTPUTS and the fwd->bwd boundary
+==============================================================================
+AOT forward returns 10 values:
+   [0] add_1(8, 16)   <- the model output h (what the user gets)
+   [1] primals_2   (8, 16)    <- SAVED for backward (placeholder)
+   [2] primals_3   (64, 16)   <- SAVED for backward (placeholder)
+   [3] primals_4   (16, 64)   <- SAVED for backward (placeholder)
+   [4] primals_5   (64, 16)   <- SAVED for backward (placeholder)
+   [5] relu        (8, 64)    <- SAVED for backward (aten.relu.default)
+   [6] detach      (8, 64)    <- SAVED for backward (aten.detach.default)
+   [7] add         (8, 16)    <- SAVED for backward (aten.add.Tensor)
+   [8] relu_1      (8, 64)    <- SAVED for backward (aten.relu.default)
+   [9] detach_1    (8, 64)    <- SAVED for backward (aten.detach.default)
+AOT backward takes 10 inputs = 9 saved tensors + 1 tangent(s) (dLoss/dh, computed EAGERLY outside)
+AOT backward returns 5 values: mm_10, None, mm_8, mm_6, mm_4  (grads of graph inputs; None for x)
+make_fx joint returns 5 values: loss + 4 grads (layers.0.w1, layers.0.w2, layers.1.w1, layers.1.w2)  -- no saved-tensor boundary: backward nodes read forward nodes directly
+
+==============================================================================
+6. WHAT EACH GRAPH COVERS
+==============================================================================
+Dynamo     loss ops present: NONE (loss ran eagerly)
+AOT fw+bw  loss ops present: NONE (loss ran eagerly)
+make_fx    loss ops present: ['aten.div.Tensor', 'aten.pow.Tensor_Scalar', 'aten.sub.Tensor', 'aten.sum.default']
+ones_like (seed dLoss/dLoss=1, start of backward) in make_fx: 1, in AOT: 0
+
+==============================================================================
+7. NODE METADATA (what graph passes can read)
+==============================================================================
+B-1 Dynamo  : custom(8), example_value(8), nn_module_stack(8), seq_nr(8), source_fn_stack(8), stack_trace(8)
+B-2 AOT fw  : custom(10), from_node(10), nn_module_stack(10), original_aten(10), partitioner_tag(10), seq_nr(10), source_fn_stack(10), stack_trace(10), tensor_meta(10), val(10)
+B-3 AOT bw  : autograd_backward(19), custom(18), fwd_nn_module_stack(18), fwd_source_fn_stack(18), is_gradient_acc(1), original_aten(19), partitioner_tag(19), seq_nr(19), stack_trace(19), tensor_meta(19), val(19)
+A   make_fx : custom(10), original_aten(39), seq_nr(39), stack_trace(10), tensor_meta(39), val(39)
+B-1 Dynamo  : 8/8 op nodes carry custom['module_fqn']
+B-2 AOT fw  : 10/10 op nodes carry custom['module_fqn']
+B-3 AOT bw  : 18/19 op nodes carry custom['module_fqn']
+A   make_fx : 10/39 op nodes carry custom['module_fqn']
+
+==============================================================================
+8. NUMERICS: same math?
+==============================================================================
+loss  make_fx=34.395226  dynamo+aot=34.395226
+max |diff| over loss + 4 grads: 0.000e+00
+
+wrote dynamo_vs_makefx_side_by_side.txt
+EXIT=0

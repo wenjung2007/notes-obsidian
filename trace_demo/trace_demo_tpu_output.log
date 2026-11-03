@@ -1,0 +1,35 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1791782361.317370 4022633 pjrt_api.cc:119] GetPjrtApi was found for TPU at /home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/libtpu/libtpu.so
+I0000 00:00:1791782361.362351 4022633 device_rt.cc:133] PjRt runtime initialization deferred for tpu
+Successfully renamed PrivateUse1 backend to 'tpu'. Device: device(type='tpu')
+Registered Python module for 'tpu'.
+I0000 00:00:1791782361.365188 4022633 libtpu_version.cc:107] Setting libtpu version to: 0.0.47
+I0000 00:00:1791782361.368100 4022633 pjrt_api.cc:168] The PJRT plugin has PJRT API version 0.114. The framework PJRT API version is 0.114.
+I0000 00:00:1791782365.346892 4022633 pjrt_c_api_client.cc:188] PjRtCApiClient created.
+W0000 00:00:1791782365.346931 4022633 pjrt_state.cc:280] Only using 1 device out of all the 4 addressable devices.
+/home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/torch_tpu/_internal/export/export.py:539: UserWarning: 'default_generators' is experimental and subject to change: Default generators for TPU devices.
+  ] + [device_module.default_generators[device.index or 0]]
+I0000 00:00:1791782365.398950 4022633 compilation_cache_utils.cc:217] Tier-3 compilation cache root directory: 
+I0000 00:00:1791782365.398973 4022633 tier2_compilation_cache.cc:82] Tier-2 compilation cache is disabled for world size 1.
+I0000 00:00:1791782365.398975 4022633 tier3_compilation_cache.cc:50] Backup compilation for tier-3 cache read is disabled as tier-3 cache is disabled.
+Device type: tpu, Device index: default
+Initializing TPU distributed runtime
+inputs live on: W=tpu:0, x0=tpu:0
+
+=== PHASE 1: TRACE (CPU host, FakeTensors, no TPU compute) ===
+    [python body running, call #1; x is FakeTensor on device=tpu:0]
+trace time: 0.022s, graph nodes: 18
+example inputs recorded: [('FakeTensor', (4, 1), 'tpu:0'), ('FakeTensor', (1, 4), 'tpu:0'), ('FakeTensor', (1, 1), 'tpu:0'), ('FakeTensor', (), 'tpu:0')]
+
+=== PHASE 2: COMPILE with StaticCompiler (CPU host builds XLA) ===
+StaticCompiler ready in 0.341s (PJRT may finish compiling lazily on the first execute)
+
+=== PHASE 3: RUN compiled executable (TPU) ===
+chip0: outputs on device=tpu:0; enqueue 0.3 ms, read-back 23.7 ms -> loss=3.1250, dL/dW=[-2.5, -5.0, -0.0, -2.5]
+chip1: outputs on device=tpu:0; enqueue 0.1 ms, read-back 0.9 ms -> loss=0.5000, dL/dW=[0.0, 1.0, 1.0, 0.0]
+python body calls during RUN: 0
+I0000 00:00:1791782366.754263 4022633 compilation_cache.cc:340] Compilation cache evicted.
+I0000 00:00:1791782366.754297 4022633 compilation_cache.cc:204] CompilationCache final stats: num_cache_reqs=3
+num_cache_hits=1 {33.3%}
+peak_compilation_memory_bytes=unknown
+

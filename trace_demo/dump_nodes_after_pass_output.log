@@ -1,0 +1,1255 @@
+Successfully renamed PrivateUse1 backend to 'tpu'. Device: device(type='tpu')
+Registered Python module for 'tpu'.
+Device type: tpu, Device index: default
+Initializing TPU distributed runtime
+tracing contexts: non_strict=True, patch_engine_backward=False
+=== running recompute_pass ===
+   recompute [mm -> relu -> detach] right before backward node t_13
+   recompute [mm_2 -> relu_1 -> detach_1] right before backward node t_9
+   recompute [mm_4 -> relu_2 -> detach_2] right before backward node t_5
+   recompute [mm_6 -> relu_3 -> detach_3] right before backward node t
+NOTE: torch.compiler._patch_engine_backward not available in this wheel; backward regions inferred from inputs (see 'region src').
+check: every gradient node's region matches its parameter tag: OK
+
+=== ALL NODES AFTER recompute pass: 95 nodes (backward starts at #35) ===
+legend: region = layer id from meta.custom.module_fqn (-1 = not in a layer)
+
+#0   w1s_1
+      op        : placeholder   target: W1s_1
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=4096
+      phase     : PLACEHOLDER
+      region    : -1
+      seq_nr    : -1
+      input kind: static (model state)
+      source    : -
+      users     : #11 mm, #83 mm_23
+
+#1   w1s_2
+      op        : placeholder   target: W1s_2
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=4096
+      phase     : PLACEHOLDER
+      region    : -1
+      seq_nr    : -1
+      input kind: static (model state)
+      source    : -
+      users     : #16 mm_2, #80 t_12, #69 mm_24
+
+#2   w1s_3
+      op        : placeholder   target: W1s_3
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=4096
+      phase     : PLACEHOLDER
+      region    : -1
+      seq_nr    : -1
+      input kind: static (model state)
+      source    : -
+      users     : #21 mm_4, #66 t_8, #55 mm_25
+
+#3   w1s_4
+      op        : placeholder   target: W1s_4
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=4096
+      phase     : PLACEHOLDER
+      region    : -1
+      seq_nr    : -1
+      input kind: static (model state)
+      source    : -
+      users     : #26 mm_6, #52 t_4, #41 mm_26
+
+#4   w2s_1
+      op        : placeholder   target: W2s_1
+      value     : shape=(64, 16) dtype=float32 device=tpu:0 bytes=4096
+      phase     : PLACEHOLDER
+      region    : -1
+      seq_nr    : -1
+      input kind: static (model state)
+      source    : -
+      users     : #14 mm_1, #88 t_14
+
+#5   w2s_2
+      op        : placeholder   target: W2s_2
+      value     : shape=(64, 16) dtype=float32 device=tpu:0 bytes=4096
+      phase     : PLACEHOLDER
+      region    : -1
+      seq_nr    : -1
+      input kind: static (model state)
+      source    : -
+      users     : #19 mm_3, #74 t_10
+
+#6   w2s_3
+      op        : placeholder   target: W2s_3
+      value     : shape=(64, 16) dtype=float32 device=tpu:0 bytes=4096
+      phase     : PLACEHOLDER
+      region    : -1
+      seq_nr    : -1
+      input kind: static (model state)
+      source    : -
+      users     : #24 mm_5, #60 t_6
+
+#7   w2s_4
+      op        : placeholder   target: W2s_4
+      value     : shape=(64, 16) dtype=float32 device=tpu:0 bytes=4096
+      phase     : PLACEHOLDER
+      region    : -1
+      seq_nr    : -1
+      input kind: static (model state)
+      source    : -
+      users     : #29 mm_7, #46 t_2
+
+#8   x_1
+      op        : placeholder   target: x_1
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : PLACEHOLDER
+      region    : -1
+      seq_nr    : -1
+      input kind: non-static (batch input)
+      source    : -
+      users     : #11 mm, #15 add, #92 t_15, #83 mm_23
+
+#9   t_1
+      op        : placeholder   target: t_1
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : PLACEHOLDER
+      region    : -1
+      seq_nr    : -1
+      input kind: non-static (batch input)
+      source    : -
+      users     : #31 sub
+
+#10  n_1
+      op        : placeholder   target: n_1
+      value     : shape=() dtype=float32 device=tpu:0 bytes=4
+      phase     : PLACEHOLDER
+      region    : -1
+      seq_nr    : -1
+      input kind: non-static (batch input)
+      source    : -
+      users     : #34 div, #36 div_1
+
+#11  mm
+      op        : call_function   target: aten.mm.default
+      args      : (#8 x_1, #0 w1s_1)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : FORWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 0
+      source    : -
+      users     : #12 relu
+      other meta: ['original_aten']
+
+#12  relu
+      op        : call_function   target: aten.relu.default
+      args      : (#11 mm)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : FORWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 1
+      source    : -
+      users     : #13 detach, #14 mm_1
+      other meta: ['original_aten']
+
+#13  detach
+      op        : call_function   target: aten.detach.default
+      args      : (#12 relu)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : FORWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 1
+      source    : -
+      users     : -
+      other meta: ['original_aten']
+
+#14  mm_1
+      op        : call_function   target: aten.mm.default
+      args      : (#12 relu, #4 w2s_1)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : FORWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 2
+      source    : -
+      users     : #15 add
+      other meta: ['original_aten']
+
+#15  add
+      op        : call_function   target: aten.add.Tensor
+      args      : (#8 x_1, #14 mm_1)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : FORWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 3
+      source    : -
+      users     : #16 mm_2, #20 add_1, #78 t_11, #69 mm_24
+      other meta: ['original_aten']
+
+#16  mm_2
+      op        : call_function   target: aten.mm.default
+      args      : (#15 add, #1 w1s_2)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : FORWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 4
+      source    : -
+      users     : #17 relu_1
+      other meta: ['original_aten']
+
+#17  relu_1
+      op        : call_function   target: aten.relu.default
+      args      : (#16 mm_2)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : FORWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 5
+      source    : -
+      users     : #18 detach_1, #19 mm_3
+      other meta: ['original_aten']
+
+#18  detach_1
+      op        : call_function   target: aten.detach.default
+      args      : (#17 relu_1)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : FORWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 5
+      source    : -
+      users     : -
+      other meta: ['original_aten']
+
+#19  mm_3
+      op        : call_function   target: aten.mm.default
+      args      : (#17 relu_1, #5 w2s_2)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : FORWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 6
+      source    : -
+      users     : #20 add_1
+      other meta: ['original_aten']
+
+#20  add_1
+      op        : call_function   target: aten.add.Tensor
+      args      : (#15 add, #19 mm_3)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : FORWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 7
+      source    : -
+      users     : #21 mm_4, #25 add_2, #64 t_7, #55 mm_25
+      other meta: ['original_aten']
+
+#21  mm_4
+      op        : call_function   target: aten.mm.default
+      args      : (#20 add_1, #2 w1s_3)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : FORWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 8
+      source    : -
+      users     : #22 relu_2
+      other meta: ['original_aten']
+
+#22  relu_2
+      op        : call_function   target: aten.relu.default
+      args      : (#21 mm_4)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : FORWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 9
+      source    : -
+      users     : #23 detach_2, #24 mm_5
+      other meta: ['original_aten']
+
+#23  detach_2
+      op        : call_function   target: aten.detach.default
+      args      : (#22 relu_2)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : FORWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 9
+      source    : -
+      users     : -
+      other meta: ['original_aten']
+
+#24  mm_5
+      op        : call_function   target: aten.mm.default
+      args      : (#22 relu_2, #6 w2s_3)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : FORWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 10
+      source    : -
+      users     : #25 add_2
+      other meta: ['original_aten']
+
+#25  add_2
+      op        : call_function   target: aten.add.Tensor
+      args      : (#20 add_1, #24 mm_5)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : FORWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 11
+      source    : -
+      users     : #26 mm_6, #30 add_3, #50 t_3, #41 mm_26
+      other meta: ['original_aten']
+
+#26  mm_6
+      op        : call_function   target: aten.mm.default
+      args      : (#25 add_2, #3 w1s_4)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : FORWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 12
+      source    : -
+      users     : #27 relu_3
+      other meta: ['original_aten']
+
+#27  relu_3
+      op        : call_function   target: aten.relu.default
+      args      : (#26 mm_6)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : FORWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 13
+      source    : -
+      users     : #28 detach_3, #29 mm_7
+      other meta: ['original_aten']
+
+#28  detach_3
+      op        : call_function   target: aten.detach.default
+      args      : (#27 relu_3)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : FORWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 13
+      source    : -
+      users     : -
+      other meta: ['original_aten']
+
+#29  mm_7
+      op        : call_function   target: aten.mm.default
+      args      : (#27 relu_3, #7 w2s_4)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : FORWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 14
+      source    : -
+      users     : #30 add_3
+      other meta: ['original_aten']
+
+#30  add_3
+      op        : call_function   target: aten.add.Tensor
+      args      : (#25 add_2, #29 mm_7)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : FORWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 15
+      source    : -
+      users     : #31 sub
+      other meta: ['original_aten']
+
+#31  sub
+      op        : call_function   target: aten.sub.Tensor
+      args      : (#30 add_3, #9 t_1)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : FORWARD
+      region    : -1   (module_fqn='loss')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 16
+      source    : -
+      users     : #32 pow_1, #38 pow_2
+      other meta: ['original_aten']
+
+#32  pow_1
+      op        : call_function   target: aten.pow.Tensor_Scalar
+      args      : (#31 sub, 2)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : FORWARD
+      region    : -1   (module_fqn='loss')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 17
+      source    : -
+      users     : #33 sum_1
+      other meta: ['original_aten']
+
+#33  sum_1
+      op        : call_function   target: aten.sum.default
+      args      : (#32 pow_1)
+      value     : shape=() dtype=float32 device=tpu:0 bytes=4
+      phase     : FORWARD
+      region    : -1   (module_fqn='loss')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 18
+      source    : -
+      users     : #34 div
+      other meta: ['original_aten']
+
+#34  div
+      op        : call_function   target: aten.div.Tensor
+      args      : (#33 sum_1, #10 n_1)
+      value     : shape=() dtype=float32 device=tpu:0 bytes=4
+      phase     : FORWARD
+      region    : -1   (module_fqn='loss')
+      region src: annotate(module_fqn) during forward
+      seq_nr    : 19
+      source    : -
+      users     : #35 ones_like, #94 output
+      other meta: ['original_aten']
+
+#35  ones_like
+      op        : call_function   target: aten.ones_like.default
+      args      : (#34 div)
+      value     : shape=() dtype=float32 device=tpu:0 bytes=4
+      phase     : BACKWARD
+      region    : -1   (module_fqn='loss')
+      region src: inferred from inputs (fallback: no layer input -> loss)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #36 div_1
+      other meta: ['original_aten']
+
+#36  div_1
+      op        : call_function   target: aten.div.Tensor
+      args      : (#35 ones_like, #10 n_1)
+      value     : shape=() dtype=float32 device=tpu:0 bytes=4
+      phase     : BACKWARD
+      region    : -1   (module_fqn='loss')
+      region src: inferred from inputs (fallback: no layer input -> loss)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #37 expand
+      other meta: ['original_aten']
+
+#37  expand
+      op        : call_function   target: aten.expand.default
+      args      : (#36 div_1, [8, 16])
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : -1   (module_fqn='loss')
+      region src: inferred from inputs (fallback: no layer input -> loss)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #40 mul_1
+      other meta: ['original_aten']
+
+#38  pow_2
+      op        : call_function   target: aten.pow.Tensor_Scalar
+      args      : (#31 sub, 1.0)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : BACKWARD
+      region    : -1   (module_fqn='loss')
+      region src: inferred from inputs (fallback: no layer input -> loss)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #39 mul
+      other meta: ['original_aten']
+
+#39  mul
+      op        : call_function   target: aten.mul.Scalar
+      args      : (#38 pow_2, 2.0)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : BACKWARD
+      region    : -1   (module_fqn='loss')
+      region src: inferred from inputs (fallback: no layer input -> loss)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #40 mul_1
+      other meta: ['original_aten']
+
+#40  mul_1
+      op        : call_function   target: aten.mul.Tensor
+      args      : (#37 expand, #39 mul)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : BACKWARD
+      region    : -1   (module_fqn='loss')
+      region src: inferred from inputs (fallback: no layer input -> loss)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #45 mm_8, #47 mm_9, #54 add_4
+      other meta: ['original_aten']
+
+#41  mm_26
+      op        : call_function   target: aten.mm.default
+      args      : (#25 add_2, #3 w1s_4)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 3   (module_fqn='layers.3')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 12
+      recomputed: copy of forward 'mm_6' (inserted by recompute_pass)
+      source    : -
+      users     : #42 relu_7
+      other meta: ['original_aten']
+
+#42  relu_7
+      op        : call_function   target: aten.relu.default
+      args      : (#41 mm_26)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 3   (module_fqn='layers.3')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 13
+      recomputed: copy of forward 'relu_3' (inserted by recompute_pass)
+      source    : -
+      users     : #43 detach_11, #44 t
+      other meta: ['original_aten']
+
+#43  detach_11
+      op        : call_function   target: aten.detach.default
+      args      : (#42 relu_7)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 3   (module_fqn='layers.3')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 13
+      recomputed: copy of forward 'detach_3' (inserted by recompute_pass)
+      source    : -
+      users     : #48 detach_4
+      other meta: ['original_aten']
+
+#44  t
+      op        : call_function   target: aten.t.default
+      args      : (#42 relu_7)
+      value     : shape=(64, 8) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #45 mm_8
+      other meta: ['original_aten']
+
+#45  mm_8
+      op        : call_function   target: aten.mm.default
+      args      : (#44 t, #40 mul_1)
+      value     : shape=(64, 16) dtype=float32 device=tpu:0 bytes=4096
+      phase     : BACKWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      grad of   : ('layers.3.w2',)   (parameter-gradient tag)
+      source    : -
+      users     : #94 output
+      other meta: ['original_aten']
+
+#46  t_2
+      op        : call_function   target: aten.t.default
+      args      : (#7 w2s_4)
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #47 mm_9
+      other meta: ['original_aten']
+
+#47  mm_9
+      op        : call_function   target: aten.mm.default
+      args      : (#40 mul_1, #46 t_2)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : BACKWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #49 threshold_backward
+      other meta: ['original_aten']
+
+#48  detach_4
+      op        : call_function   target: aten.detach.default
+      args      : (#43 detach_11)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #49 threshold_backward
+      other meta: ['original_aten']
+
+#49  threshold_backward
+      op        : call_function   target: aten.threshold_backward.default
+      args      : (#47 mm_9, #48 detach_4, 0)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : BACKWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #51 mm_10, #53 mm_11
+      other meta: ['original_aten']
+
+#50  t_3
+      op        : call_function   target: aten.t.default
+      args      : (#25 add_2)
+      value     : shape=(16, 8) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #51 mm_10
+      other meta: ['original_aten']
+
+#51  mm_10
+      op        : call_function   target: aten.mm.default
+      args      : (#50 t_3, #49 threshold_backward)
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=4096
+      phase     : BACKWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      grad of   : ('layers.3.w1',)   (parameter-gradient tag)
+      source    : -
+      users     : #94 output
+      other meta: ['original_aten']
+
+#52  t_4
+      op        : call_function   target: aten.t.default
+      args      : (#3 w1s_4)
+      value     : shape=(64, 16) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #53 mm_11
+      other meta: ['original_aten']
+
+#53  mm_11
+      op        : call_function   target: aten.mm.default
+      args      : (#49 threshold_backward, #52 t_4)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : BACKWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #54 add_4
+      other meta: ['original_aten']
+
+#54  add_4
+      op        : call_function   target: aten.add.Tensor
+      args      : (#40 mul_1, #53 mm_11)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : BACKWARD
+      region    : 3   (module_fqn='layers.3')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #59 mm_12, #61 mm_13, #68 add_5
+      other meta: ['original_aten']
+
+#55  mm_25
+      op        : call_function   target: aten.mm.default
+      args      : (#20 add_1, #2 w1s_3)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 2   (module_fqn='layers.2')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 8
+      recomputed: copy of forward 'mm_4' (inserted by recompute_pass)
+      source    : -
+      users     : #56 relu_6
+      other meta: ['original_aten']
+
+#56  relu_6
+      op        : call_function   target: aten.relu.default
+      args      : (#55 mm_25)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 2   (module_fqn='layers.2')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 9
+      recomputed: copy of forward 'relu_2' (inserted by recompute_pass)
+      source    : -
+      users     : #57 detach_10, #58 t_5
+      other meta: ['original_aten']
+
+#57  detach_10
+      op        : call_function   target: aten.detach.default
+      args      : (#56 relu_6)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 2   (module_fqn='layers.2')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 9
+      recomputed: copy of forward 'detach_2' (inserted by recompute_pass)
+      source    : -
+      users     : #62 detach_5
+      other meta: ['original_aten']
+
+#58  t_5
+      op        : call_function   target: aten.t.default
+      args      : (#56 relu_6)
+      value     : shape=(64, 8) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #59 mm_12
+      other meta: ['original_aten']
+
+#59  mm_12
+      op        : call_function   target: aten.mm.default
+      args      : (#58 t_5, #54 add_4)
+      value     : shape=(64, 16) dtype=float32 device=tpu:0 bytes=4096
+      phase     : BACKWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      grad of   : ('layers.2.w2',)   (parameter-gradient tag)
+      source    : -
+      users     : #94 output
+      other meta: ['original_aten']
+
+#60  t_6
+      op        : call_function   target: aten.t.default
+      args      : (#6 w2s_3)
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #61 mm_13
+      other meta: ['original_aten']
+
+#61  mm_13
+      op        : call_function   target: aten.mm.default
+      args      : (#54 add_4, #60 t_6)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : BACKWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #63 threshold_backward_1
+      other meta: ['original_aten']
+
+#62  detach_5
+      op        : call_function   target: aten.detach.default
+      args      : (#57 detach_10)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #63 threshold_backward_1
+      other meta: ['original_aten']
+
+#63  threshold_backward_1
+      op        : call_function   target: aten.threshold_backward.default
+      args      : (#61 mm_13, #62 detach_5, 0)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : BACKWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #65 mm_14, #67 mm_15
+      other meta: ['original_aten']
+
+#64  t_7
+      op        : call_function   target: aten.t.default
+      args      : (#20 add_1)
+      value     : shape=(16, 8) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #65 mm_14
+      other meta: ['original_aten']
+
+#65  mm_14
+      op        : call_function   target: aten.mm.default
+      args      : (#64 t_7, #63 threshold_backward_1)
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=4096
+      phase     : BACKWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      grad of   : ('layers.2.w1',)   (parameter-gradient tag)
+      source    : -
+      users     : #94 output
+      other meta: ['original_aten']
+
+#66  t_8
+      op        : call_function   target: aten.t.default
+      args      : (#2 w1s_3)
+      value     : shape=(64, 16) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #67 mm_15
+      other meta: ['original_aten']
+
+#67  mm_15
+      op        : call_function   target: aten.mm.default
+      args      : (#63 threshold_backward_1, #66 t_8)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : BACKWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #68 add_5
+      other meta: ['original_aten']
+
+#68  add_5
+      op        : call_function   target: aten.add.Tensor
+      args      : (#54 add_4, #67 mm_15)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : BACKWARD
+      region    : 2   (module_fqn='layers.2')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #73 mm_16, #75 mm_17, #82 add_6
+      other meta: ['original_aten']
+
+#69  mm_24
+      op        : call_function   target: aten.mm.default
+      args      : (#15 add, #1 w1s_2)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 1   (module_fqn='layers.1')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 4
+      recomputed: copy of forward 'mm_2' (inserted by recompute_pass)
+      source    : -
+      users     : #70 relu_5
+      other meta: ['original_aten']
+
+#70  relu_5
+      op        : call_function   target: aten.relu.default
+      args      : (#69 mm_24)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 1   (module_fqn='layers.1')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 5
+      recomputed: copy of forward 'relu_1' (inserted by recompute_pass)
+      source    : -
+      users     : #71 detach_9, #72 t_9
+      other meta: ['original_aten']
+
+#71  detach_9
+      op        : call_function   target: aten.detach.default
+      args      : (#70 relu_5)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 1   (module_fqn='layers.1')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 5
+      recomputed: copy of forward 'detach_1' (inserted by recompute_pass)
+      source    : -
+      users     : #76 detach_6
+      other meta: ['original_aten']
+
+#72  t_9
+      op        : call_function   target: aten.t.default
+      args      : (#70 relu_5)
+      value     : shape=(64, 8) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #73 mm_16
+      other meta: ['original_aten']
+
+#73  mm_16
+      op        : call_function   target: aten.mm.default
+      args      : (#72 t_9, #68 add_5)
+      value     : shape=(64, 16) dtype=float32 device=tpu:0 bytes=4096
+      phase     : BACKWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      grad of   : ('layers.1.w2',)   (parameter-gradient tag)
+      source    : -
+      users     : #94 output
+      other meta: ['original_aten']
+
+#74  t_10
+      op        : call_function   target: aten.t.default
+      args      : (#5 w2s_2)
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #75 mm_17
+      other meta: ['original_aten']
+
+#75  mm_17
+      op        : call_function   target: aten.mm.default
+      args      : (#68 add_5, #74 t_10)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : BACKWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #77 threshold_backward_2
+      other meta: ['original_aten']
+
+#76  detach_6
+      op        : call_function   target: aten.detach.default
+      args      : (#71 detach_9)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #77 threshold_backward_2
+      other meta: ['original_aten']
+
+#77  threshold_backward_2
+      op        : call_function   target: aten.threshold_backward.default
+      args      : (#75 mm_17, #76 detach_6, 0)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : BACKWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #79 mm_18, #81 mm_19
+      other meta: ['original_aten']
+
+#78  t_11
+      op        : call_function   target: aten.t.default
+      args      : (#15 add)
+      value     : shape=(16, 8) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #79 mm_18
+      other meta: ['original_aten']
+
+#79  mm_18
+      op        : call_function   target: aten.mm.default
+      args      : (#78 t_11, #77 threshold_backward_2)
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=4096
+      phase     : BACKWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      grad of   : ('layers.1.w1',)   (parameter-gradient tag)
+      source    : -
+      users     : #94 output
+      other meta: ['original_aten']
+
+#80  t_12
+      op        : call_function   target: aten.t.default
+      args      : (#1 w1s_2)
+      value     : shape=(64, 16) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #81 mm_19
+      other meta: ['original_aten']
+
+#81  mm_19
+      op        : call_function   target: aten.mm.default
+      args      : (#77 threshold_backward_2, #80 t_12)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : BACKWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #82 add_6
+      other meta: ['original_aten']
+
+#82  add_6
+      op        : call_function   target: aten.add.Tensor
+      args      : (#68 add_5, #81 mm_19)
+      value     : shape=(8, 16) dtype=float32 device=tpu:0 bytes=512
+      phase     : BACKWARD
+      region    : 1   (module_fqn='layers.1')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #87 mm_20, #89 mm_21
+      other meta: ['original_aten']
+
+#83  mm_23
+      op        : call_function   target: aten.mm.default
+      args      : (#8 x_1, #0 w1s_1)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 0   (module_fqn='layers.0')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 0
+      recomputed: copy of forward 'mm' (inserted by recompute_pass)
+      source    : -
+      users     : #84 relu_4
+      other meta: ['original_aten']
+
+#84  relu_4
+      op        : call_function   target: aten.relu.default
+      args      : (#83 mm_23)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 0   (module_fqn='layers.0')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 1
+      recomputed: copy of forward 'relu' (inserted by recompute_pass)
+      source    : -
+      users     : #85 detach_8, #86 t_13
+      other meta: ['original_aten']
+
+#85  detach_8
+      op        : call_function   target: aten.detach.default
+      args      : (#84 relu_4)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : RECOMPUTE (forward op copied into backward)
+      region    : 0   (module_fqn='layers.0')
+      region src: copied with the forward op by recompute_pass
+      seq_nr    : 1
+      recomputed: copy of forward 'detach' (inserted by recompute_pass)
+      source    : -
+      users     : #90 detach_7
+      other meta: ['original_aten']
+
+#86  t_13
+      op        : call_function   target: aten.t.default
+      args      : (#84 relu_4)
+      value     : shape=(64, 8) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #87 mm_20
+      other meta: ['original_aten']
+
+#87  mm_20
+      op        : call_function   target: aten.mm.default
+      args      : (#86 t_13, #82 add_6)
+      value     : shape=(64, 16) dtype=float32 device=tpu:0 bytes=4096
+      phase     : BACKWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      grad of   : ('layers.0.w2',)   (parameter-gradient tag)
+      source    : -
+      users     : #94 output
+      other meta: ['original_aten']
+
+#88  t_14
+      op        : call_function   target: aten.t.default
+      args      : (#4 w2s_1)
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #89 mm_21
+      other meta: ['original_aten']
+
+#89  mm_21
+      op        : call_function   target: aten.mm.default
+      args      : (#82 add_6, #88 t_14)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : BACKWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #91 threshold_backward_3
+      other meta: ['original_aten']
+
+#90  detach_7
+      op        : call_function   target: aten.detach.default
+      args      : (#85 detach_8)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #91 threshold_backward_3
+      other meta: ['original_aten']
+
+#91  threshold_backward_3
+      op        : call_function   target: aten.threshold_backward.default
+      args      : (#89 mm_21, #90 detach_7, 0)
+      value     : shape=(8, 64) dtype=float32 device=tpu:0 bytes=2048
+      phase     : BACKWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #93 mm_22
+      other meta: ['original_aten']
+
+#92  t_15
+      op        : call_function   target: aten.t.default
+      args      : (#8 x_1)
+      value     : shape=(16, 8) dtype=float32 device=tpu:0 bytes=0
+      phase     : BACKWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: inferred from inputs (fallback: own weight / recompute / layer input)
+      seq_nr    : 19
+      autograd_backward: True
+      source    : -
+      users     : #93 mm_22
+      other meta: ['original_aten']
+
+#93  mm_22
+      op        : call_function   target: aten.mm.default
+      args      : (#92 t_15, #91 threshold_backward_3)
+      value     : shape=(16, 64) dtype=float32 device=tpu:0 bytes=4096
+      phase     : BACKWARD
+      region    : 0   (module_fqn='layers.0')
+      region src: inferred from inputs (fallback: lowest backward input)
+      seq_nr    : 19
+      autograd_backward: True
+      grad of   : ('layers.0.w1',)   (parameter-gradient tag)
+      source    : -
+      users     : #94 output
+      other meta: ['original_aten']
+
+#94  output
+      op        : output   target: output
+      args      : #34 div, #93 mm_22, #79 mm_18, #65 mm_14, #51 mm_10, #87 mm_20, #73 mm_16, #59 mm_12, #45 mm_8
+      value     : -
+      phase     : OUTPUT
+      region    : -1
+      seq_nr    : 19
+      source    : -
+      users     : -
+      other meta: ['original_aten']
+
+=== REGION SUMMARY (what apply_tpu_remat_schedule groups by) ===
+
+region -1  [not in a layer (loss / grad tags)]
+   forward   (4): #31 sub, #32 pow_1, #33 sum_1, #34 div
+   recompute (0): -
+   backward  (6): #35 ones_like, #36 div_1, #37 expand, #38 pow_2, #39 mul, #40 mul_1
+
+region 0  [layer 0]
+   forward   (5): #11 mm, #12 relu, #13 detach, #14 mm_1, #15 add
+   recompute (3): #83 mm_23, #84 relu_4, #85 detach_8
+   backward  (8): #86 t_13, #87 mm_20, #88 t_14, #89 mm_21, #90 detach_7, #91 threshold_backward_3, #92 t_15, #93 mm_22
+
+region 1  [layer 1]
+   forward   (5): #16 mm_2, #17 relu_1, #18 detach_1, #19 mm_3, #20 add_1
+   recompute (3): #69 mm_24, #70 relu_5, #71 detach_9
+   backward  (11): #72 t_9, #73 mm_16, #74 t_10, #75 mm_17, #76 detach_6, #77 threshold_backward_2, #78 t_11, #79 mm_18, #80 t_12, #81 mm_19, #82 add_6
+
+region 2  [layer 2]
+   forward   (5): #21 mm_4, #22 relu_2, #23 detach_2, #24 mm_5, #25 add_2
+   recompute (3): #55 mm_25, #56 relu_6, #57 detach_10
+   backward  (11): #58 t_5, #59 mm_12, #60 t_6, #61 mm_13, #62 detach_5, #63 threshold_backward_1, #64 t_7, #65 mm_14, #66 t_8, #67 mm_15, #68 add_5
+
+region 3  [layer 3]
+   forward   (5): #26 mm_6, #27 relu_3, #28 detach_3, #29 mm_7, #30 add_3
+   recompute (3): #41 mm_26, #42 relu_7, #43 detach_11
+   backward  (11): #44 t, #45 mm_8, #46 t_2, #47 mm_9, #48 detach_4, #49 threshold_backward, #50 t_3, #51 mm_10, #52 t_4, #53 mm_11, #54 add_4
+
+=== apply_tpu_remat_schedule boundary analysis (same rules as remat_schedule.py L284-336) ===
+
+region 0 (layer 0):
+   primal boundaries  : ['#8 x_1']   <- saved forward values the recompute starts from
+   cotangent candidates: ['#82 add_6']   <- backward values entering from outside; earliest is the cotangent
+   ordering gradients : ["#73 mm_16 ('layers.1.w2',)", "#79 mm_18 ('layers.1.w1',)"]   <- next region (1) dW tags
+   => barrier would be optimization_barrier(x_1, add_6, mm_16, mm_18)
+
+region 1 (layer 1):
+   primal boundaries  : ['#15 add']   <- saved forward values the recompute starts from
+   cotangent candidates: ['#68 add_5']   <- backward values entering from outside; earliest is the cotangent
+   ordering gradients : ["#59 mm_12 ('layers.2.w2',)", "#65 mm_14 ('layers.2.w1',)"]   <- next region (2) dW tags
+   => barrier would be optimization_barrier(add, add_5, mm_12, mm_14)
+
+region 2 (layer 2):
+   primal boundaries  : ['#20 add_1']   <- saved forward values the recompute starts from
+   cotangent candidates: ['#54 add_4']   <- backward values entering from outside; earliest is the cotangent
+   ordering gradients : ["#45 mm_8 ('layers.3.w2',)", "#51 mm_10 ('layers.3.w1',)"]   <- next region (3) dW tags
+   => barrier would be optimization_barrier(add_1, add_4, mm_8, mm_10)
+
+region 3 (layer 3):
+   primal boundaries  : ['#25 add_2']   <- saved forward values the recompute starts from
+   cotangent candidates: ['#40 mul_1']   <- backward values entering from outside; earliest is the cotangent
+   ordering gradients : []   <- next region (None) dW tags
+   (last region: no next layer, so no barrier is inserted)
+num_cache_hits=0 {NA}
+peak_compilation_memory_bytes=unknown
+

@@ -1,0 +1,84 @@
+Successfully renamed PrivateUse1 backend to 'tpu'. Device: device(type='tpu')
+Registered Python module for 'tpu'.
+  ] + [device_module.default_generators[device.index or 0]]
+Device type: tpu, Device index: default
+Initializing TPU distributed runtime
+========================================================================
+1. TRACE
+========================================================================
+
+--- BEFORE passes ---
+graph nodes: 83  (backward starts at node #35)
+forward values kept alive into backward ('saved activations'):
+   name        op            shape      made at  last use   bytes
+   relu        relu          (8, 64)         12        74    2048
+   detach      detach        (8, 64)         13        78       0
+   add         add           (8, 16)         15        69     512
+   relu_1      relu          (8, 64)         17        63    2048
+   detach_1    detach        (8, 64)         18        67       0
+   add_1       add           (8, 16)         20        58     512
+   relu_2      relu          (8, 64)         22        52    2048
+   detach_2    detach        (8, 64)         23        56       0
+   add_2       add           (8, 16)         25        47     512
+   relu_3      relu          (8, 64)         27        41    2048
+   detach_3    detach        (8, 64)         28        45       0
+   sub         sub           (8, 16)         31        38     512
+   div         div           ()              34        82       4
+total saved-activation bytes: 10244
+PEAK live bytes incl. outputs (grads): 34820  (at node #81)
+PEAK live bytes, activations only     : 12288
+
+========================================================================
+2. GRAPH PASS: activation recompute
+========================================================================
+   recompute [mm -> relu -> detach] right before backward node t_13
+   recompute [mm_2 -> relu_1 -> detach_1] right before backward node t_9
+   recompute [mm_4 -> relu_2 -> detach_2] right before backward node t_5
+   recompute [mm_6 -> relu_3 -> detach_3] right before backward node t
+
+--- AFTER recompute pass ---
+graph nodes: 95  (backward starts at node #35)
+forward values kept alive into backward ('saved activations'):
+   name        op            shape      made at  last use   bytes
+   add         add           (8, 16)         15        78     512
+   add_1       add           (8, 16)         20        64     512
+   add_2       add           (8, 16)         25        50     512
+   sub         sub           (8, 16)         31        38     512
+   div         div           ()              34        94       4
+total saved-activation bytes: 2052
+PEAK live bytes incl. outputs (grads): 34820  (at node #93)
+PEAK live bytes, activations only     : 6144
+
+peak activation memory: 12288 -> 6144 bytes (50% less), cost: 12 extra nodes (re-run forward ops)
+
+recomputed nodes now living inside backward (new name <- original):
+   #41  mm_26      = aten.mm.default       (add_2, w1s_4)   <- copy of forward 'mm_6'
+   #42  relu_7     = aten.relu.default     (mm_26)   <- copy of forward 'relu_3'
+   #43  detach_11  = aten.detach.default   (relu_7)   <- copy of forward 'detach_3'
+   #55  mm_25      = aten.mm.default       (add_1, w1s_3)   <- copy of forward 'mm_4'
+   #56  relu_6     = aten.relu.default     (mm_25)   <- copy of forward 'relu_2'
+   #57  detach_10  = aten.detach.default   (relu_6)   <- copy of forward 'detach_2'
+   #69  mm_24      = aten.mm.default       (add, w1s_2)   <- copy of forward 'mm_2'
+   #70  relu_5     = aten.relu.default     (mm_24)   <- copy of forward 'relu_1'
+   #71  detach_9   = aten.detach.default   (relu_5)   <- copy of forward 'detach_1'
+   #83  mm_23      = aten.mm.default       (x_1, w1s_1)   <- copy of forward 'mm'
+   #84  relu_4     = aten.relu.default     (mm_23)   <- copy of forward 'relu'
+   #85  detach_8   = aten.detach.default   (relu_4)   <- copy of forward 'detach'
+   (backward starts at node #35)
+
+========================================================================
+3. COMPILE with torch_tpu StaticCompiler
+========================================================================
+compiled 'base' graph: 83 FX nodes -> TPU executable
+compiled 'remat' graph: 91 FX nodes -> TPU executable
+
+========================================================================
+4. RUN both on TPU and compare
+========================================================================
+loss  base=35.731010  remat=35.731010
+max |difference| over loss + all 8 gradients: 0.000e+00
+dL/dW1_0[0,:4] base : [0.73952, -0.13999, -0.21127, -1.16506]
+dL/dW1_0[0,:4] remat: [0.73952, -0.13999, -0.21127, -1.16506]
+num_cache_hits=19 {61.2%}
+peak_compilation_memory_bytes=unknown
+

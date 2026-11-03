@@ -1,0 +1,25 @@
+
+=== 1. values pass through unchanged ===
+x_1    in (8, 16) -> out (8, 16)  identical=True
+add_6  in (8, 16) -> out (8, 16)  identical=True
+mm_16  in (64, 16) -> out (64, 16)  identical=True
+mm_18  in (16, 64) -> out (16, 64)  identical=True
+
+=== 2. StableHLO of the barriered layer-0 entry ===
+  func.func public @main(%arg0: tensor<8x16xf32>, %arg1: tensor<8x16xf32>, %arg2: tensor<64x16xf32>, %arg3: tensor<16x64xf32>, %arg4: tensor<16x64xf32>) -> (tensor<64x16xf32> {jax.result_info = "result"}) {
+  %0:4 = stablehlo.optimization_barrier %arg0, %arg1, %arg2, %arg3 : tensor<8x16xf32>, tensor<8x16xf32>, tensor<64x16xf32>, tensor<16x64xf32>
+  %1 = stablehlo.dot_general %0#0, %arg4, contracting_dims = [1] x [0], precision = [DEFAULT, DEFAULT] : (tensor<8x16xf32>, tensor<16x64xf32>) -> tensor<8x64xf32>
+  %3 = stablehlo.transpose %2, dims = [1, 0] : (tensor<8x64xf32>) -> tensor<64x8xf32>
+  %4 = stablehlo.dot_general %3, %0#1, contracting_dims = [1] x [0], precision = [DEFAULT, DEFAULT] : (tensor<64x8xf32>, tensor<8x16xf32>) -> tensor<64x16xf32>
+  return %4 : tensor<64x16xf32>
+  %cst = stablehlo.constant dense<0.000000e+00> : tensor<f32>
+  %0 = stablehlo.broadcast_in_dim %cst, dims = [] : (tensor<f32>) -> tensor<8x64xf32>
+  %1 = stablehlo.maximum %arg0, %0 : tensor<8x64xf32>
+  return %1 : tensor<8x64xf32>
+
+=== 3. compiled results ===
+barrier vs no-barrier identical: True
+mm_20 shape (64, 16), first row[:4] = [-3.806999921798706, 1.3174999952316284, -4.6468000411987305, -6.173799991607666]
+
+=== 4. is the barrier still there after XLA optimization? ===
+optimized HLO contains 'opt-barrier': False

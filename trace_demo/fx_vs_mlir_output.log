@@ -1,0 +1,87 @@
+Successfully renamed PrivateUse1 backend to 'tpu'. Device: device(type='tpu')
+Registered Python module for 'tpu'.
+/home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/torch_tpu/_internal/export/export.py:539: UserWarning: 'default_generators' is experimental and subject to change: Default generators for TPU devices.
+  ] + [device_module.default_generators[device.index or 0]]
+Device type: tpu, Device index: default
+Initializing TPU distributed runtime
+======================================================================
+FX GRAPH (from make_fx)
+======================================================================
+
+
+
+def forward(self, W_1, x_1, t_1, n_1):
+    w_1 = W_1
+    mm = torch.ops.aten.mm.default(x_1, w_1);  w_1 = None
+    sub = torch.ops.aten.sub.Tensor(mm, t_1);  mm = t_1 = None
+    pow_1 = torch.ops.aten.pow.Tensor_Scalar(sub, 2)
+    sum_1 = torch.ops.aten.sum.default(pow_1);  pow_1 = None
+    div = torch.ops.aten.div.Tensor(sum_1, n_1);  sum_1 = None
+    ones_like = torch.ops.aten.ones_like.default(div, pin_memory = False, memory_format = torch.preserve_format)
+    div_1 = torch.ops.aten.div.Tensor(ones_like, n_1);  ones_like = n_1 = None
+    expand = torch.ops.aten.expand.default(div_1, [1, 1]);  div_1 = None
+    pow_2 = torch.ops.aten.pow.Tensor_Scalar(sub, 1.0);  sub = None
+    mul = torch.ops.aten.mul.Scalar(pow_2, 2.0);  pow_2 = None
+    mul_1 = torch.ops.aten.mul.Tensor(expand, mul);  expand = mul = None
+    t = torch.ops.aten.t.default(x_1);  x_1 = None
+    mm_1 = torch.ops.aten.mm.default(t, mul_1);  t = mul_1 = None
+    return [div, mm_1]
+    
+======================================================================
+MLIR / StableHLO (from torch_tpu StaticCompiler)
+======================================================================
+#loc = loc(unknown)
+module @tt_jit_export_L194C0_dispatch_fx_node_div {
+  func.func @main(%arg0: tensor<4x1xf32> loc(unknown), %arg1: tensor<1x4xf32> loc(unknown), %arg2: tensor<1x1xf32> loc(unknown), %arg3: tensor<f32> loc(unknown)) -> (tensor<f32>, tensor<4x1xf32>) {
+    %cst = stablehlo.constant dense<2.000000e+00> : tensor<f64> loc(#loc15)
+    %cst_0 = stablehlo.constant dense<1.000000e+00> : tensor<f32> loc(#loc16)
+    %0 = stablehlo.dot_general %arg1, %arg0, contracting_dims = [1] x [0], precision = [DEFAULT, DEFAULT] : (tensor<1x4xf32>, tensor<4x1xf32>) -> tensor<1x1xf32> loc(#loc17)
+    %1 = stablehlo.subtract %0, %arg2 : tensor<1x1xf32> loc(#loc18)
+    %2 = stablehlo.broadcast_in_dim %cst_0, dims = [] : (tensor<f32>) -> tensor<1x1xf32> loc(#loc16)
+    %3 = stablehlo.power %1, %2 : tensor<1x1xf32> loc(#loc16)
+    %4 = stablehlo.convert %cst : (tensor<f64>) -> tensor<f32> loc(#loc15)
+    %5 = stablehlo.broadcast_in_dim %4, dims = [] : (tensor<f32>) -> tensor<1x1xf32> loc(#loc15)
+    %6 = stablehlo.multiply %3, %5 : tensor<1x1xf32> loc(#loc15)
+    %cst_1 = stablehlo.constant dense<1.000000e+00> : tensor<f32> loc(#loc19)
+    %7 = stablehlo.divide %cst_1, %arg3 : tensor<f32> loc(#loc20)
+    %8 = stablehlo.reshape %7 : (tensor<f32>) -> tensor<1x1xf32> loc(#loc21)
+    %9 = stablehlo.multiply %8, %6 : tensor<1x1xf32> loc(#loc15)
+    %10 = stablehlo.reshape %arg1 : (tensor<1x4xf32>) -> tensor<4x1xf32> loc(#loc22)
+    %11 = stablehlo.dot_general %10, %9, contracting_dims = [1] x [0], precision = [DEFAULT, DEFAULT] : (tensor<4x1xf32>, tensor<1x1xf32>) -> tensor<4x1xf32> loc(#loc17)
+    %cst_2 = stablehlo.constant dense<2.000000e+00> : tensor<f32> loc(#loc16)
+    %12 = stablehlo.broadcast_in_dim %cst_2, dims = [] : (tensor<f32>) -> tensor<1x1xf32> loc(#loc16)
+    %13 = stablehlo.power %1, %12 : tensor<1x1xf32> loc(#loc16)
+    %cst_3 = stablehlo.constant dense<0.000000e+00> : tensor<f32> loc(#loc23)
+    %14 = stablehlo.reduce(%13 init: %cst_3) applies stablehlo.add across dimensions = [0, 1] : (tensor<1x1xf32>, tensor<f32>) -> tensor<f32> loc(#loc23)
+    %15 = stablehlo.divide %14, %arg3 : tensor<f32> loc(#loc20)
+    return %15, %11 : tensor<f32>, tensor<4x1xf32> loc(#loc)
+  } loc(#loc)
+} loc(#loc)
+#loc1 = loc("/home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/torch_tpu/_internal/export/export.py":194:0)
+#loc2 = loc("/home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/torch_tpu/_internal/export/export.py":197:0)
+#loc3 = loc("/home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/torch_tpu/_internal/export/export.py":563:0)
+#loc4 = loc("/home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/torch_tpu/_internal/compile/compiler.py":390:0)
+#loc5 = loc("/home/wenjung_google_com/venv_torch212/lib/python3.12/site-packages/torch_tpu/_internal/compile/compiler.py":558:0)
+#loc6 = loc("dispatch_fx_node"(#loc1))
+#loc7 = loc("run_node"(#loc2))
+#loc8 = loc("fx_to_mlir"(#loc3))
+#loc9 = loc("_compile"(#loc4))
+#loc10 = loc("__call__"(#loc5))
+#loc11 = loc(callsite(#loc9 at #loc10))
+#loc12 = loc(callsite(#loc8 at #loc11))
+#loc13 = loc(callsite(#loc7 at #loc12))
+#loc14 = loc(callsite(#loc6 at #loc13))
+#loc15 = loc("mul/mul"(#loc14))
+#loc16 = loc("pow/pow"(#loc14))
+#loc17 = loc("mm/mm"(#loc14))
+#loc18 = loc("sub/sub"(#loc14))
+#loc19 = loc("fill_/fill_"(#loc14))
+#loc20 = loc("div/div"(#loc14))
+#loc21 = loc("mul/as_strided"(#loc14))
+#loc22 = loc("mm/as_strided"(#loc14))
+#loc23 = loc("sum/sum"(#loc14))
+
+run on TPU -> 3.125 [-2.5, -5.0, -0.0, -2.5]
+num_cache_hits=0 {0.0%}
+peak_compilation_memory_bytes=unknown
+
